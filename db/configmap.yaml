@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-secret
+  labels:
+    app: postgres
+data:
+  POSTGRES_DB: predictions_db
+  POSTGRES_USER: wonwoo
+  POSTGRES_PASSWORD: wonwoo
+  
