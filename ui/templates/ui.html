@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="ui/static/style.css">
+    <title>AI Predictor!</title>
+</head>
+
+<body>
+    <header>
+        <nav>
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('prediction_page') }}">Prediction</a>
+            <a href="{{ url_for('history') }}">History</a>
+        </nav>
+    </header>
+    
+    <section class="hero">
+        <div class="hero-content">
+            <h1>AI Image Detector</h1>
+            <p>Detect whether an image is AI-generated or real in seconds.</p>
+            <a href="{{ url_for('predict') }}"><button class="start-btn">Start Prediction</button></a>
+        </div>
+    </section>
+
+    <script src="ui.js"></script>
+
+</body>
+
+</html>
