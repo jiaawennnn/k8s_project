@@ -23,14 +23,18 @@ conn = psycopg2.connect(
 )
 
 def save_image_to_db(filename, image_bytes, label, confidence, timestamp):
-    cur = conn.cursor()
-    cur.execute("""
-        INSERT INTO prediction_history (filename, image_bytes, label, confidence, timestamp)
-        VALUES (%s, %s, %s, %s, %s)
-    """, (filename, psycopg2.Binary(image_bytes), label, confidence, timestamp))
-    conn.commit()
-    cur.close()
-    conn.close()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO prediction_history (filename, image_bytes, label, confidence, timestamp)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (filename, psycopg2.Binary(image_bytes), label, confidence, timestamp))
+        conn.commit()
+        cur.close()
+
+    except Exception as e:
+        conn.rollback()  # <-- IMPORTANT: reset failed transaction
+        print("Database error:", e)
 
 @app.route('/')
 def home():
