@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inference
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inference
+  template:
+    metadata:
+      labels:
+        app: inference
+    spec:
+      containers:
+      - name: inference
+        image: inference:latest
+        ports:
+        - containerPort: 5003
+        volumeMounts:
+        - name: model-volume
+          mountPath: /app/model
+      volumes:
+      - name: model-volume
+        persistentVolumeClaim:
+          claimName: model-pvc
