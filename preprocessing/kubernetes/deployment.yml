@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: preprocess-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: preprocess
+  template:
+    metadata:
+      labels:
+        app: preprocess
+    spec:
+      containers:
+      - name: preprocess
+        image: model/preprocess:latest  # Replace with your actual image
+        ports:
+        - containerPort: 5001

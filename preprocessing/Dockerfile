@@ -9,9 +9,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy your ingestion/cleaning script
-COPY data_processing.py .
+COPY . . 
 
-EXPOSE 5000
+EXPOSE 5001
 
 # Default command
-CMD ["python", "./data_processing.py"] 
+CMD ["python", "app.py"] 

@@ -1,174 +1,239 @@
 import numpy as np
-import pandas as pd
 import cv2
+from skimage.feature import local_binary_pattern
 import os
-import re 
-import hashlib
-from PIL import Image
-import io
+import shutil
+import random
+from sklearn.model_selection import train_test_split
 
-#Rename the images in the Raw/Images [Generated & Real]
-#Function to extract the numbers from the file name
-def extract_class_name(file_name):
-    # Remove the file extension
-    file_name = os.path.splitext(file_name)[0]
-
-    # Remove numbers and parentheses
-    file_name = re.sub(r'\(\d+\)', '', file_name)  # Remove patterns like "(1)"
-    # Replace underscores with spaces
-    class_name = file_name.replace('_', ' ').strip()
-    return class_name
-
-Generated = '../data/raw/Images/Generated'
-Real = '../data/raw/Images/Real'
-
-data = []
-
-generated_counter = 1
-real_counter = 1
-
-# Process Generated images
-for root, dirs, files in os.walk(Generated):
-    for file in sorted(files):
-        if file.lower().endswith('.jpg'):
-            old_path = os.path.join(root, file)
-            new_name = f"generated_{generated_counter}.jpg"
-            new_path = os.path.join(root, new_name)
-
-            if old_path != new_path and not os.path.exists(new_path):
-                os.rename(old_path, new_path)
-                print(f"Renamed: {file} → {new_name}")
-
-            class_name = extract_class_name(file)
-            data.append({'file_path': new_path, 'class_name': class_name})
-            generated_counter += 1
-
-# Process Real images
-for root, dirs, files in os.walk(Real):
-    for file in sorted(files):
-        if file.lower().endswith('.jpg'):
-            old_path = os.path.join(root, file)
-            new_name = f"real_{real_counter}.jpg"
-            new_path = os.path.join(root, new_name)
-
-            if old_path != new_path and not os.path.exists(new_path):
-                os.rename(old_path, new_path)
-                print(f"Renamed: {file} → {new_name}")
-
-            class_name = extract_class_name(file)
-            data.append({'file_path': new_path, 'class_name': class_name})
-            real_counter += 1
-            
-            
-# Find Duplicated images in Generated image folder and deletes them. 
-def get_hash(image_path):
-    with open(image_path, 'rb') as f:
-        return hashlib.md5(f.read()).hexdigest()
-
-def find_duplicates(directory):
-    hashes = {}
-    duplicates = []
-
-    for filename in os.listdir(directory):
-        if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-            path = os.path.join(directory, filename)
-            file_hash = get_hash(path)
-
-            if file_hash in hashes:
-                duplicates.append((path, hashes[file_hash]))  # full paths
-            else:
-                hashes[file_hash] = path
-
-    return duplicates
-
-# Update with your image folder
-image_dir = "../data/raw/Images/Generated"
-dups = find_duplicates(image_dir)
-
-for dup, original in dups:
-    print(f"Duplicate: {dup} --> Original: {original}")
-
-# Delete duplicate files (only dup, not original)
-for dup_path, original_path in dups:
-    try:
-        os.remove(dup_path)
-        print(f"Deleted duplicate: {dup_path}")
-    except Exception as e:
-        print(f"Failed to delete {dup_path}: {e}")
-
-
-
-# Find Duplicated images in Real image folder and delete them. 
-def get_hash(image_path):
-    with open(image_path, 'rb') as f:
-        return hashlib.md5(f.read()).hexdigest()
-
-def find_duplicates(directory):
-    hashes = {}
-    duplicates = []
-
-    for filename in os.listdir(directory):
-        if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-            path = os.path.join(directory, filename)
-            file_hash = get_hash(path)
-
-            if file_hash in hashes:
-                duplicates.append((path, hashes[file_hash]))  # full paths
-            else:
-                hashes[file_hash] = path
-    return duplicates
-
-# Real Images folder
-image_dir = "../data/raw/Images/Real"
-dups = find_duplicates(image_dir)
-
-for dup, original in dups:
-    print(f"Duplicate: {dup} --> Original: {original}")
-
-# Delete duplicate files (only dup, not original)
-for dup_path, original_path in dups:
-    try:
-        os.remove(dup_path)
-        print(f"Deleted duplicate: {dup_path}")
-    except Exception as e:
-        print(f"Failed to delete {dup_path}: {e}")
-
-
-
-# Function to resize images in a directory
-def resize_images_in_directory(directory, target_size=(224, 224)):
-    for filename in os.listdir(directory):
-        if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-            file_path = os.path.join(directory, filename)
-            try:
-                image = cv2.imread(file_path)
-                if image is not None:
-                    resized_image = cv2.resize(image, target_size)
-                    cv2.imwrite(file_path, resized_image)
-                    print(f"Resized and saved: {file_path}")
-                else:
-                    print(f"Failed to read image: {file_path}")
-            except Exception as e:
-                print(f"Error processing {file_path}: {e}")
-
-
-
-# Function to sharpen the images in a directory
-def sharpen_images_in_directory(directory):
-    kernel = np.array([[0, -1, 0],
-                       [-1, 5,-1],
-                       [0, -1, 0]])
+#SPLIT THE DATASET INTO TRAIN AND TEST FOLDERS
     
-    for filename in os.listdir(directory):
-        if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-            file_path = os.path.join(directory, filename)
-            try:
-                image = cv2.imread(file_path)
-                if image is not None:
-                    sharpened_image = cv2.filter2D(image, -1, kernel)
-                    cv2.imwrite(file_path, sharpened_image)
-                    print(f"Sharpened and saved: {file_path}")
+# Input paths for both classes
+input_dirs = {
+    "Generated": "../data/raw/Generated",
+    "Real": "../data/raw/Real"
+}
+
+# Output base directory
+output_dir = "../data/Split_Images"
+train_dir = os.path.join(output_dir, "train")
+val_dir = os.path.join(output_dir, "val")
+
+# Clean output directories if needed
+if os.path.exists(output_dir):
+    shutil.rmtree(output_dir)
+
+os.makedirs(train_dir, exist_ok=True)
+os.makedirs(val_dir, exist_ok=True)
+
+# Limit and split ratio
+max_images_per_class = 25000
+train_ratio = 0.8  # 80% train, 20% validation
+
+for class_name, class_path in input_dirs.items():
+    if not os.path.isdir(class_path):
+        print(f"Directory not found for class '{class_name}': {class_path}")
+        continue
+
+    # Collect image files only
+    all_files = [
+        os.path.join(class_path, f)
+        for f in os.listdir(class_path)
+        if f.lower().endswith(('.jpg', '.jpeg', '.png'))
+    ]
+
+    if not all_files:
+        print(f"No image files found in {class_path}")
+        continue
+
+    # Permanently remove excess images if more than 25k (randomly)
+    if len(all_files) > max_images_per_class:
+        keep_files = set(random.sample(all_files, max_images_per_class))
+        delete_files = set(all_files) - keep_files
+
+        for file_path in delete_files:
+            os.remove(file_path)
+        all_files = list(keep_files)
+        print(f"[{class_name}] Randomly removed {len(delete_files)} images to keep only 25,000.")
+
+    # Train/Val split
+    train_files, val_files = train_test_split(all_files, train_size=train_ratio, random_state=42)
+
+    # Create class subdirectories
+    train_class_dir = os.path.join(train_dir, class_name)
+    val_class_dir = os.path.join(val_dir, class_name)
+    os.makedirs(train_class_dir, exist_ok=True)
+    os.makedirs(val_class_dir, exist_ok=True)
+
+    # Copy files
+    for file_path in train_files:
+        shutil.copy2(file_path, train_class_dir)
+    for file_path in val_files:
+        shutil.copy2(file_path, val_class_dir)
+
+    print(f"[{class_name}] → Train: {len(train_files)}, Val: {len(val_files)}")
+
+print("Dataset cleanup and split completed with random deletion.")
+
+
+
+#IMAGE PREPROCESSING FUNCTIONS
+#applying clahe to the images for contrast enhancement 
+def apply_clahe_to_gray(image, clip_limit=10.0, tile_grid_size=(8, 8)):
+    if len(image.shape) == 2:  # grayscale image
+      clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
+      cl = clahe.apply(image)
+      return cl
+    else:  # color image
+        lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
+        cl = clahe.apply(l)
+        merged = cv2.merge((cl, a, b))
+        return cv2.cvtColor(merged, cv2.COLOR_LAB2BGR)
+
+# Preprocessing: resize, sharpen, denoise, CLAHE
+def preprocess_blurry_image(image, upscale_size=(224, 224), apply_denoise=True):
+    #Load the image 
+    if image is None:
+        raise ValueError("Image not found or path is incorrect.")
+
+    # Resize the image
+    image = cv2.resize(image, upscale_size, interpolation=cv2.INTER_CUBIC)
+
+    #Sharpen the image
+    blur = cv2.GaussianBlur(image, (5, 5), sigmaX=1)
+    sharpened = cv2.addWeighted(image, 1.5, blur, -0.5, 0)
+
+    #Denoise the image
+    if apply_denoise:
+        denoised = cv2.bilateralFilter(sharpened, d=9, sigmaColor=75, sigmaSpace=75)
+    else:
+        denoised = sharpened
+
+    enhanced = apply_clahe_to_gray(denoised)
+    return enhanced
+
+# Canny edge detection
+def apply_canny_edge_detection(image_path, low_thresh=60, high_thresh=130, kernel_size=7):
+    #grayscale conversion
+    gray = cv2.cvtColor(image_path, cv2.COLOR_BGR2GRAY)
+
+    #Contrast Enhnacement 
+    equalized = apply_clahe_to_gray(gray)
+
+    #Noise Reduction 
+    blurred = cv2.GaussianBlur(equalized, (kernel_size, kernel_size), 1.4)
+
+    #Gradient Calculation
+    grad_x = cv2.Sobel(blurred, cv2.CV_64F, 1, 0, ksize=3)
+    grad_y = cv2.Sobel(blurred, cv2.CV_64F, 0, 1, ksize=3)
+    gradient_magnitude = cv2.magnitude(grad_x, grad_y)
+    gradient_direction = cv2.phase(grad_x, grad_y, angleInDegrees=True)
+
+    #Non-maximum Suppression
+    non_max_suppressed = np.zeros_like(gradient_magnitude, dtype=np.uint8)
+    angle = gradient_direction / 100.0 * np.pi # To convert to radians
+
+    for i in range(1, gradient_magnitude.shape[0] - 1):
+      for j in range(1, gradient_magnitude.shape[1] - 1):
+        if (angle[i,j] >=0 and angle[i,j] < np.pi / 4) or (angle[i,j] >= 3* np.pi / 4):
+          neighbor1 = gradient_magnitude[i -1, j]
+          neighbor2 = gradient_magnitude[i, j + 1]
+        else:
+              neighbor1 = gradient_magnitude[i - 1, j]
+              neighbor2 = gradient_magnitude[i + 1, j]
+
+        if gradient_magnitude[i, j] >= neighbor1 and gradient_magnitude[i, j] >= neighbor2:
+            non_max_suppressed[i, j] = gradient_magnitude[i, j]
+        else:
+            non_max_suppressed[i, j] = 0
+
+    # Double thresholding
+    strong_edges = np.zeros_like(non_max_suppressed, dtype=np.uint8)
+    weak_edges = np.zeros_like(non_max_suppressed, dtype=np.uint8)
+    strong_edges[non_max_suppressed >= high_thresh] = 255
+    weak_edges[(non_max_suppressed >= low_thresh) & (non_max_suppressed < high_thresh)] = 100
+    
+    #Edge tracking by Hysteresis
+    edges = np.copy(strong_edges)
+    for i in range(1, strong_edges.shape[0] - 1):
+        for j in range(1, strong_edges.shape[1] - 1):
+            if weak_edges[i, j] == 100:
+                if np.any(strong_edges[i - 1:i + 2, j - 1:j + 2] == 255):
+                    edges[i, j] = 255
                 else:
-                    print(f"Failed to read image: {file_path}")
-            except Exception as e:
-                print(f"Error processing {file_path}: {e}")
+                    edges[i, j] = 0
+    return edges
+
+def compute_sobel_magnitude(edge_img):
+    sobelx = cv2.Sobel(edge_img, cv2.CV_64F, 1, 0, ksize=3)
+    sobely = cv2.Sobel(edge_img, cv2.CV_64F, 0, 1, ksize=3)
+    magnitude = cv2.magnitude(sobelx, sobely)
+    magnitude_image = cv2.convertScaleAbs(magnitude)
+
+    return magnitude_image
+
+# Blend Sobel with base image
+def blend_with_sobel(base_img, sobel_map, alpha=0.6, beta=0.4):
+    sobel_color = cv2.cvtColor(sobel_map, cv2.COLOR_GRAY2BGR)
+    blended = cv2.addWeighted(base_img, alpha, sobel_color, beta, 0)
+    blended_image = np.clip(blended, 0, 255).astype(np.uint8)
+
+    return blended_image
+
+# Local Binary Pattern
+def compute_lbp(image, P=8, R=1):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    lbp = local_binary_pattern(gray, P, R, method="uniform")
+    lbp_normalized = ((lbp - lbp.min()) / (lbp.max() - lbp.min()) * 255).astype(np.uint8)
+
+    return lbp_normalized
+
+# Noise residual to detect subtle differences
+def extract_noise_residual(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    denoised = cv2.fastNlMeansDenoising(gray, h=40)
+    residual = cv2.absdiff(gray, denoised)
+    residual_normalized = cv2.normalize(residual, None, 0, 255, cv2.NORM_MINMAX)
+
+    return residual_normalized
+
+# Full pipeline
+def full_analysis_pipeline(image, 
+                           upscale_size=(224, 224), 
+                           apply_denoise=True, 
+                           low_thresh=60, 
+                           high_thresh=130, 
+                           kernel_size=7):
+
+    # Process to enhance the image
+    enhanced = preprocess_blurry_image(
+        image=image, 
+        upscale_size=upscale_size, 
+        apply_denoise=apply_denoise
+        )
+    
+    # Edge Detection 
+    edges = apply_canny_edge_detection(
+        enhanced,
+        low_thresh=low_thresh, 
+        high_thresh=high_thresh,
+        kernel_size=kernel_size
+        )
+
+    #Sobel Gradient 
+    sobel_map = compute_sobel_magnitude(edges)
+
+    # Blending Enhancec and Sobel Map, overlay 
+    blended = blend_with_sobel(enhanced, sobel_map)
+
+    # Local Binary Map for Visualisation 
+    lbp_map = compute_lbp(blended)
+
+    # Extracting Residual Noise from image
+    residual_normalized = extract_noise_residual(blended)
+
+    # return enhanced, edges, blended, sobel_map, lbp_map, residual_normalized
+    
+    return blended
