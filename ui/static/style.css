@@ -1,0 +1,75 @@
+body {
+    background-color: black;
+    text-align: center;
+    color: white;
+}
+
+nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background-color: #000000;
+    padding: 10px 0;
+    font-family: Arial, sans-serif;
+    height: 70px;
+}
+
+/* Home icon on left */
+nav .home-icon {
+    position: absolute;
+    left: 40px;
+    color: white;
+    font-size: 24px;
+    text-decoration: none;
+}
+
+nav .home-icon:hover {
+    color: #ff9be1;
+}
+
+/* Center container for links */
+nav .nav-links {
+    display: flex;
+    gap: 30px;
+}
+
+nav .nav-links a {
+    color: rgb(255, 255, 255);
+    text-decoration: none;
+    font-size: 17px;
+    font-weight: 200;
+}
+
+nav .nav-links a.active {
+  font-weight: bolder;
+  color: #FFD700;  
+}
+
+nav .nav-links a:hover {
+    color: #ffa8e5;
+}
+
+nav .nav-links a:visited, nav .nav-links a:link {
+    text-decoration: none;
+    color: white;
+}
+
+input[type="file"] {
+  /* Hide the default filename text */
+  color: transparent;
+}
+
+input[type="file"]::-webkit-file-upload-button {
+  color: initial; /* show button text */
+}
+
+table {
+    background-color: rgba(79, 78, 78, 0.3);
+    border-radius: 20px;
+    padding: 20px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 90%;  
+    max-width: 1200px;
+}
