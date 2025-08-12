@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: preprocess-service
+  name: preprocess
 spec:
   selector:
     app: preprocess
