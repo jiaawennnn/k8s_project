@@ -2,6 +2,7 @@ import cv2
 import os
 from flask import Flask, request, send_file
 from preprocessing import full_analysis_pipeline
+import numpy as np
 
 
 app = Flask(__name__)
@@ -33,9 +34,16 @@ def process_images():
 
         # Call your preprocessing pipeline
         blended_image = full_analysis_pipeline(image)
+        
+        # Normalize only if needed
+        if processed_img.max() > 1.0:  # image is in 0–255 range
+            processed_img = blended_image / 255.0
+
+        # Add batch dimension 
+        processed_img = np.expand_dims(processed_img, axis=0)
 
         # Save the processed image
-        cv2.imwrite(output_path, blended_image)
+        cv2.imwrite(output_path, processed_img)
 
         return send_file(output_path, mimetype='image/jpeg')
  

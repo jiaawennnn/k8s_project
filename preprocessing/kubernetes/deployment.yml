@@ -3,10 +3,12 @@ kind: Deployment
 metadata:
   name: preprocess-deploy
 spec:
-  replicas: 1
+  replicas: 3 # Number of replicas for the deployment [Scaling]
+  strategy:
+    type: RollingUpdate #[Rollout/Rollback]
   selector:
     matchLabels:
-      app: preprocess
+      app: preprocess # Label to match the pods. [self-healing]
   template:
     metadata:
       labels:
@@ -14,6 +16,23 @@ spec:
     spec:
       containers:
       - name: preprocess
-        image: model/preprocess:latest  # Replace with your actual image
-        ports:
-        - containerPort: 5001
+        image: model/preprocess:latest #built an image with the preprocessing code
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        livenessProbe: # [SELF-HEALING]
+          httpGet:
+            path: /health 
+            port: 5001
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe: # [SELF-HEALING]
+          httpGet:  
+            path: /ready
+            port: 5001
+          initialDelaySeconds: 5
+          periodSeconds: 5
