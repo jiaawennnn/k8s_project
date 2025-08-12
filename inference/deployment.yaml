@@ -4,6 +4,11 @@ metadata:
   name: inference
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
   selector:
     matchLabels:
       app: inference
@@ -17,6 +22,18 @@ spec:
         image: inference:latest
         ports:
         - containerPort: 5003
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5003
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5003
+          initialDelaySeconds: 5
+          periodSeconds: 5
         volumeMounts:
         - name: model-volume
           mountPath: /app/model

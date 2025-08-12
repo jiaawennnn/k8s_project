@@ -20,6 +20,10 @@ app = Flask(__name__)
 # model = load_model(MODEL_PATH)
 # model.eval()  
 
+@app.route("/health", methods=["GET"])
+def health_check():
+    return jsonify({"status": "ok"}), 200
+
 @app.route("/inference", methods=["POST"])
 def inference():
     if "file" not in request.files:
