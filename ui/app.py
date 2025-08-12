@@ -1,17 +1,15 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, redirect, url_for
 from werkzeug.utils import secure_filename
-from flask_sqlalchemy import SQLAlchemy
 import base64
 import psycopg2
-import os
-import requests
 from datetime import datetime
 
 app = Flask(__name__)
 
 # url for the containers
-PREPROCESSING_URL = "http://preprocess:5000/preprocess"
-INFERENCE_URL = "http://inference:5000/inference"
+PREPROCESSING_URL = "http://preprocess:5001/preprocess"
+TRAINING_URL = "http://training:5002/train"
+INFERENCE_URL = "http://inference:5003/inference"
 
 # Create connection
 conn = psycopg2.connect(
@@ -22,27 +20,31 @@ conn = psycopg2.connect(
     port=5432
 )
 
-def save_image_to_db(filename, image_bytes, label, confidence, timestamp):
+def save_image_to_db(filename, image_bytes, label, confidence, timestamp, feedback=None):
     try:
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO prediction_history (filename, image_bytes, label, confidence, timestamp)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (filename, psycopg2.Binary(image_bytes), label, confidence, timestamp))
+            INSERT INTO prediction_history (filename, image_bytes, label, confidence, timestamp, feedback)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id
+        """, (filename, psycopg2.Binary(image_bytes), label, confidence, timestamp, feedback))
+        prediction_id = cur.fetchone()[0]
         conn.commit()
         cur.close()
+        return prediction_id
 
     except Exception as e:
         conn.rollback()  # <-- IMPORTANT: reset failed transaction
         print("Database error:", e)
-
+        return None
+    
 @app.route('/')
 def home():
-    return render_template('ui.html')
+    return render_template('ui.html', current_page="home")
 
 @app.route("/predict", methods=["GET"])
 def prediction_page():
-    return render_template("predict.html")
+    return render_template("predict.html" , current_page="predict")
 
 # upload user's image, sends it off for prediction, retrieves prediction result
 @app.route("/predict", methods=["POST"])
@@ -64,16 +66,17 @@ def predict():
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # Save all to DB
-    print("Saving image and data to DB...")
-    save_image_to_db(filename, image_bytes, label, confidence, timestamp)
-    print("Saved to DB successfully")
-
+    prediction_id = save_image_to_db(filename, image_bytes, label, confidence, timestamp)
+    if not prediction_id:
+        return render_template("predict.html", error="Failed to save to database")
+    
     return render_template("predict.html", 
                             image_bytes="data:image/jpeg;base64," + base64.b64encode(image_bytes).decode('utf-8'),
                             label=label,
                             confidence=confidence,
-                            timestamp=timestamp)
-
+                            timestamp=timestamp,
+                            prediction_id=prediction_id,
+                            current_page="predict")
 
 # def predict():
 #     if "image" not in request.files:
@@ -117,33 +120,48 @@ def predict():
 #                            confidence=confidence,
 #                            timestamp=timestamp.strftime("%Y-%m-%d %H:%M:%S"))
 
+@app.route('/submit_feedback', methods=['POST'])
+def submit_feedback():
+    prediction_id = request.form.get('prediction_id')
+    feedback = request.form.get('feedback')
+
+    if not prediction_id or not feedback:
+        return redirect(url_for('history'))
+
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE prediction_history SET feedback = %s WHERE id = %s",
+                    (feedback, int(prediction_id)))
+        conn.commit()
+        cur.close()
+        print(f"Feedback '{feedback}' saved for prediction_id {prediction_id}")
+    
+    except Exception as e:
+        print(f"Error updating feedback: {e}")
+        conn.rollback()
+
+    return redirect(url_for('history'))
+
 @app.route('/history', methods=["GET"])
 def history():
     cur = conn.cursor()
-    cur.execute("SELECT image_bytes, label, confidence, timestamp FROM prediction_history ORDER BY timestamp DESC")
+    cur.execute("SELECT id, filename, image_bytes, label, confidence, timestamp, feedback FROM prediction_history ORDER BY timestamp DESC")
     rows = cur.fetchall()
     cur.close()
     
     history = []
-    for image_blob, label, confidence, timestamp  in rows:
-        # Convert image BLOB to base64
-        image_base64 = base64.b64encode(image_blob).decode('utf-8')
+    for pid, filename, image_bytes, label, confidence, timestamp, feedback in rows:
         history.append({
-            'image_bytes': image_base64,
+            'id': pid,
+            'filename': filename,
+            'image_bytes': "data:image/jpeg;base64," + base64.b64encode(image_bytes).decode('utf-8'),
             'label': label,
             'confidence': confidence,
-            'timestamp': timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            'timestamp': timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+            'feedback': feedback if feedback else "No feedback provided"
         })
     print(f"Returning {len(history)} records")
-    return render_template('history.html', history=history)
-
-# @app.route('/feedback', methods=['POST'])
-# def feedback():
-#     # if prediction is correct, thumbs up. vice versa. 
-#     # if dk, add another emoji for this ???
-#     data = request.json  
-#     requests.post(INFERENCE_URL, json=data)
-#     return {'status': 'received'}
+    return render_template('history.html', history=history, current_page="history")
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
