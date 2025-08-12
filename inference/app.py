@@ -1,23 +1,22 @@
 import io
 import os
-import torch
 import numpy as np
 import cv2
 from PIL import Image
 from flask import Flask, request, jsonify
 from preprocessing.preprocessing import full_analysis_pipeline
 # from model_loader import load_model 
-from torchvision import transforms 
+import tensorflow as tf
 
 # Flask app
 app = Flask(__name__)
 
 # # To be added after having the model
-# MODEL_PATH = "/app/model/model.pt" 
+# MODEL_PATH = "/app/model/model.h5" 
 # if not os.path.exists(MODEL_PATH):
 #     raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
 
-# model = load_model(MODEL_PATH)
+# model = tf.keras.models.load_model(MODEL_PATH)
 # model.eval()  
 
 @app.route("/health", methods=["GET"])
@@ -32,28 +31,30 @@ def inference():
     try:
         file = request.files["file"]
 
-        # Load uploaded image as numpy array (BGR, as OpenCV expects)
+        # Load uploaded image as numpy array (BGR for OpenCV)
         img_pil = Image.open(io.BytesIO(file.read())).convert("RGB")
-        img_np = np.array(img_pil)[:, :, ::-1]  # RGB to BGR for OpenCV
+        img_np = np.array(img_pil)[:, :, ::-1]  # RGB to BGR
 
         processed_img = full_analysis_pipeline(img_np)
 
-        # processed_img is a numpy array in BGR format, convert back to RGB PIL Image
+        # Convert back to RGB PIL image
         processed_img_rgb = cv2.cvtColor(processed_img, cv2.COLOR_BGR2RGB)
         processed_pil = Image.fromarray(processed_img_rgb)
 
-        # Convert to tensor (minimal transform)
+        # Convert to numpy array and scale if needed
+        input_array = np.array(processed_pil).astype('float32') / 255.0  # Normalize if needed
 
-        to_tensor = transforms.ToTensor()
-        input_tensor = to_tensor(processed_pil).unsqueeze(0)
+        # Add batch dimension
+        input_tensor = np.expand_dims(input_array, axis=0)
 
-        # Run model inference
-        with torch.no_grad():
-            output = model(input_tensor)
-            _, predicted = output.max(1)
-            confidence = torch.softmax(output, dim=1)[0][predicted.item()].item()
+        # Run inference
+        predictions = model.predict(input_tensor)
 
-        result_label = "AI-generated" if predicted.item() == 1 else "Human-drawn"
+        # Assuming binary classification, adjust as needed
+        predicted_class = np.argmax(predictions, axis=1)[0]
+        confidence = float(np.max(tf.nn.softmax(predictions)))
+
+        result_label = "AI-generated" if predicted_class == 1 else "Human-drawn"
 
         return jsonify({
             "label": result_label,
