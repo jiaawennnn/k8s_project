@@ -17,6 +17,8 @@ spec:
       containers:
       - name: preprocess
         image: model/preprocess:latest #built an image with the preprocessing code
+        ports:
+        - containerPort: 5001 # Port on which the container listens
         resources:
           requests:
             cpu: "500m"
@@ -36,3 +38,5 @@ spec:
             port: 5001
           initialDelaySeconds: 5
           periodSeconds: 5
+
+
