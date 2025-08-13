@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: preprocess-deploy
+  name: deploy
 spec:
   replicas: 3 # Number of replicas for the deployment [Scaling]
   strategy:
@@ -13,10 +13,11 @@ spec:
     metadata:
       labels:
         app: preprocess
+        env: tkb
     spec:
       containers:
       - name: preprocess
-        image: model/preprocess:latest #built an image with the preprocessing code
+        image: yoshana/preprocessing-img:latest 
         ports:
         - containerPort: 5001 # Port on which the container listens
         resources:
@@ -30,13 +31,12 @@ spec:
           httpGet:
             path: /health 
             port: 5001
-          initialDelaySeconds: 10
+          initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe: # [SELF-HEALING]
           httpGet:  
             path: /ready
             port: 5001
-          initialDelaySeconds: 5
+          initialDelaySeconds: 20
           periodSeconds: 5
-
 

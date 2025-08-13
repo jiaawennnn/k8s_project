@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: preprocess-svc
+spec:  
+  selector:
+    app: preprocess
+    env: tkb
+  ports:
+  - protocol: TCP
+    port: 5001 
+    targetPort: 5001
+  type: ClusterIP
+

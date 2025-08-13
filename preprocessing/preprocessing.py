@@ -9,72 +9,71 @@ from sklearn.model_selection import train_test_split
 #SPLIT THE DATASET INTO TRAIN AND TEST FOLDERS
     
 # Input paths for both classes
-input_dirs = {
-    "Generated": "../data/raw/Generated",
-    "Real": "../data/raw/Real"
-}
+# input_dirs = {
+#     "Generated": "../data/raw/Generated",
+#     "Real": "../data/raw/Real"
+# }
 
-# Output base directory
-output_dir = "../data/Split_Images"
-train_dir = os.path.join(output_dir, "train")
-val_dir = os.path.join(output_dir, "val")
+# # Output base directory
+# output_dir = "../data/Split_Images"
+# train_dir = os.path.join(output_dir, "train")
+# val_dir = os.path.join(output_dir, "val")
 
-# Clean output directories if needed
-if os.path.exists(output_dir):
-    shutil.rmtree(output_dir)
+# # Clean output directories if needed
+# if os.path.exists(output_dir):
+#     shutil.rmtree(output_dir)
 
-os.makedirs(train_dir, exist_ok=True)
-os.makedirs(val_dir, exist_ok=True)
+# os.makedirs(train_dir, exist_ok=True)
+# os.makedirs(val_dir, exist_ok=True)
 
-# Limit and split ratio
-max_images_per_class = 25000
-train_ratio = 0.8  # 80% train, 20% validation
+# # Limit and split ratio
+# max_images_per_class = 25000
+# train_ratio = 0.8  # 80% train, 20% validation
 
-for class_name, class_path in input_dirs.items():
-    if not os.path.isdir(class_path):
-        print(f"Directory not found for class '{class_name}': {class_path}")
-        continue
+# for class_name, class_path in input_dirs.items():
+#     if not os.path.isdir(class_path):
+#         print(f"Directory not found for class '{class_name}': {class_path}")
+#         continue
 
-    # Collect image files only
-    all_files = [
-        os.path.join(class_path, f)
-        for f in os.listdir(class_path)
-        if f.lower().endswith(('.jpg', '.jpeg', '.png'))
-    ]
+#     # Collect image files only
+#     all_files = [
+#         os.path.join(class_path, f)
+#         for f in os.listdir(class_path)
+#         if f.lower().endswith(('.jpg', '.jpeg', '.png'))
+#     ]
 
-    if not all_files:
-        print(f"No image files found in {class_path}")
-        continue
+#     if not all_files:
+#         print(f"No image files found in {class_path}")
+#         continue
 
-    # Permanently remove excess images if more than 25k (randomly)
-    if len(all_files) > max_images_per_class:
-        keep_files = set(random.sample(all_files, max_images_per_class))
-        delete_files = set(all_files) - keep_files
+#     # Permanently remove excess images if more than 25k (randomly)
+#     if len(all_files) > max_images_per_class:
+#         keep_files = set(random.sample(all_files, max_images_per_class))
+#         delete_files = set(all_files) - keep_files
 
-        for file_path in delete_files:
-            os.remove(file_path)
-        all_files = list(keep_files)
-        print(f"[{class_name}] Randomly removed {len(delete_files)} images to keep only 25,000.")
+#         for file_path in delete_files:
+#             os.remove(file_path)
+#         all_files = list(keep_files)
+#         print(f"[{class_name}] Randomly removed {len(delete_files)} images to keep only 25,000.")
 
-    # Train/Val split
-    train_files, val_files = train_test_split(all_files, train_size=train_ratio, random_state=42)
+#     # Train/Val split
+#     train_files, val_files = train_test_split(all_files, train_size=train_ratio, random_state=42)
 
-    # Create class subdirectories
-    train_class_dir = os.path.join(train_dir, class_name)
-    val_class_dir = os.path.join(val_dir, class_name)
-    os.makedirs(train_class_dir, exist_ok=True)
-    os.makedirs(val_class_dir, exist_ok=True)
+#     # Create class subdirectories
+#     train_class_dir = os.path.join(train_dir, class_name)
+#     val_class_dir = os.path.join(val_dir, class_name)
+#     os.makedirs(train_class_dir, exist_ok=True)
+#     os.makedirs(val_class_dir, exist_ok=True)
 
-    # Copy files
-    for file_path in train_files:
-        shutil.copy2(file_path, train_class_dir)
-    for file_path in val_files:
-        shutil.copy2(file_path, val_class_dir)
+#     # Copy files
+#     for file_path in train_files:
+#         shutil.copy2(file_path, train_class_dir)
+#     for file_path in val_files:
+#         shutil.copy2(file_path, val_class_dir)
 
-    print(f"[{class_name}] → Train: {len(train_files)}, Val: {len(val_files)}")
+#     print(f"[{class_name}] → Train: {len(train_files)}, Val: {len(val_files)}")
 
-print("Dataset cleanup and split completed with random deletion.")
-
+# print("Dataset cleanup and split completed with random deletion.")
 
 
 #IMAGE PREPROCESSING FUNCTIONS
