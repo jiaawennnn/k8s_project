@@ -1,8 +1,9 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet # postgres is stateful, so we use StatefulSet instead of Deployment
 metadata:
   name: postgres 
 spec:
+  serviceName: postgres
   replicas: 3 
   selector:
     matchLabels:
@@ -20,9 +21,9 @@ spec:
         - containerPort: 5432
         envFrom: # gets configs from configmap.yaml
             - configMapRef:
-                name: postgres-secret
+                name: postgres-secret 
         volumeMounts:
-          - mountPath: /var/lib/postgresql/data
+          - mountPath: /var/lib/postgresql/data # data written by postgres inside container here
             name: postgres-storage
       volumes:
         - name: postgres-storage
