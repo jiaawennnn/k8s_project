@@ -15,13 +15,23 @@ Then, start a minikube cluster:
 ```
 minikube start
 ```
+
+Build the image:
+```
+docker build -t wldkdnps/ui:latest ./ui
+docker push wldkdnps/ui:latest
+```
+
 Run these to create database resources:
 ```
-kubectl apply -f db/configmap.yaml
 kubectl apply -f db/pv.yaml
 kubectl apply -f db/pvc.yaml
+kubectl apply -f db/configmap.yaml
 kubectl apply -f db/deployment.yaml
 kubectl apply -f db/service.yaml
+
+kubectl apply -f ui/configmap.yaml
+kubectl apply -f ui/deployment.yaml
 ```
 ^ **Unless the code is edited, this only needs to be run once.**
 
@@ -77,7 +87,8 @@ CREATE TABLE IF NOT EXISTS prediction_history (
   image_bytes BYTEA NOT NULL,
   label TEXT,
   confidence FLOAT,
-  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  feedback TEXT
 );
 ```
 Then, click **Run** or **Ctrl + Enter**
