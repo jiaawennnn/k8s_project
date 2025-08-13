@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ui-config
+data:
+  PREPROCESSING_URL: "http://preprocess:5001/preprocess"
+  TRAINING_URL: "http://training:5002/train"
+  INFERENCE_URL: "http://inference:5003/inference"
+  DB_HOST: "postgres"
+  DB_NAME: "predictions_db"
+  DB_USER: "wonwoo"
+  DB_PASSWORD: "wonwoo" 
+  DB_PORT: "5432"
