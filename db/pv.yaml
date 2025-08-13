@@ -6,10 +6,9 @@ metadata:
     type: local
     app: postgres
 spec:
-  storageClassName: manual
   capacity:
     storage: 10Gi
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   hostPath:
-    path: /data/postgresql
+    path: /data/postgresql # data stored perrsistently here
