@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: model-training
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: model-training
+  template:
+    metadata:
+      labels:
+        app: model-training
+
+    spec:
+      restartPolicy: Always
+      containers:
+      - name: training
+        image: krystl123/training-model:latest
+        command: ["python", "train.py"]
+        resources:
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+        volumeMounts:
+        - name: training-data
+          mountPath: /app/data
+        - name: model-output
+          mountPath: /app/saved_models
+      volumes:
+      - name: training-data
+        hostPath:
+          path: /path/on/host/data
+      - name: model-output
+        hostPath:
+          path: /path/on/host/saved_models
+ 
+
+
+        
+      
