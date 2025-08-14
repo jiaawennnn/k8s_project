@@ -127,6 +127,21 @@ python ui/app.py
 
 #### Application will be hosted on: http://127.0.0.1:5000/
 
+Build the image for Preprocessing: 
+```
+docker build -t <docker_hub_username>/preprocessing-img -f preprocessing/Dockerfile .
+docker push <docker_hub_username>/preprocessing-image
+```
+Run these to create the preprocessing resources 
+```
+kubectl apply -f preprocessing/deployment.yaml
+kubectl apply -f preprocessing/service.yaml
+```
+
+port-forwarding:
+```
+kubectl port-forward svc/preprocess-svc 5001:5001
+```
 
 # Troubleshooting
 
