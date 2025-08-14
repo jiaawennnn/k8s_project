@@ -1,8 +1,10 @@
 import cv2
 import os
-from flask import Flask, request, send_file, jsonify
+from flask import Flask, request, requests, jsonify
 from preprocessing import full_analysis_pipeline
 import numpy as np
+
+INFERENCE_URL = "http://inference-svc:5003/inference"
 
 app = Flask(__name__)
 
@@ -25,21 +27,26 @@ def process_images():
 
     try:
         # Call your pipeline
-        result = full_analysis_pipeline(img_path)
+        processed_img = full_analysis_pipeline(img_path)
 
-        # If result is an image
-        if isinstance(result, np.ndarray):
-            output_path = os.path.join('/tmp', 'output.jpg')
-            cv2.imwrite(output_path, result)
-            return send_file(output_path, mimetype='image/jpeg')
+        output_path = os.path.join('/tmp', 'processed.jpg')
+        cv2.imwrite(output_path, processed_img)
+
+        with open(output_path, 'rb') as f:
+            files = {'file': f}
+            inference_response = requests.post(INFERENCE_URL, files=files)
 
         # If result is some other type of output
-        return jsonify({"result": result})
+        return jsonify({
+            "inference_status": inference_response.status_code,
+            "inference_result": inference_response.json()
+            })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
  
+ #RUN THIS TO TRAIN THE MODEL ON THE DATASET
 # @app.route('/image_folder_preprocess', methods=['GET'])
 # def process_image_folder():#IMAGE SPLIT FUNCTIONS FOR THE DATASET 
 
