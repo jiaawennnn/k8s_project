@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: deploy
 spec:
-  replicas: 3 # Number of replicas for the deployment [Scaling]
+  replicas: 2 # Number of replicas for the deployment [Scaling]
   strategy:
     type: RollingUpdate #[Rollout/Rollback]
   selector:
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: preprocess
-        image: yoshana/preprocessing-img:latest 
+        image: yoshana/preprocessing-img:latest #need to replace the name with the docker hub username.
         ports:
         - containerPort: 5001 # Port on which the container listens
         resources:

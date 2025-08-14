@@ -1,6 +1,6 @@
 import cv2
 import os
-from flask import Flask, request, send_file
+from flask import Flask, request, send_file, jsonify
 from preprocessing import full_analysis_pipeline
 import numpy as np
 
@@ -16,43 +16,29 @@ def ready():
 
 @app.route('/preprocess', methods=['POST'])
 def process_images():
-    if 'image' not in request.files:
-        return "No image part in the request", 400
+    if 'file' not in request.files:
+        return jsonify({"error": "No file provided"}), 400
 
-    file = request.files['image']
+    file = request.files['file']
+    img_path = os.path.join('/tmp', file.filename)
+    file.save(img_path)
 
-    if file.filename == '':
-        return "No selected file", 400
+    try:
+        # Call your pipeline
+        result = full_analysis_pipeline(img_path)
 
-    if file:
-        # Create temp input and output paths
-        input_path = os.path.join('uploads', file.filename)
-        output_path = os.path.join('processed', file.filename)
+        # If result is an image
+        if isinstance(result, np.ndarray):
+            output_path = os.path.join('/tmp', 'output.jpg')
+            cv2.imwrite(output_path, result)
+            return send_file(output_path, mimetype='image/jpeg')
 
-        # Save the uploaded image to disk temporarily
-        os.makedirs('uploads', exist_ok=True)
-        os.makedirs('processed', exist_ok=True)
-        file.save(input_path)
+        # If result is some other type of output
+        return jsonify({"result": result})
 
-        # Read and process
-        image = cv2.imread(input_path)
-        if image is None:
-            return "Uploaded file is not a valid image", 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-        # Call your preprocessing pipeline
-        blended_image = full_analysis_pipeline(image)
-        
-        # Normalize only if needed
-        if processed_img.max() > 1.0:  # image is in 0–255 range
-            processed_img = blended_image / 255.0
-
-        # Add batch dimension 
-        processed_img = np.expand_dims(processed_img, axis=0)
-
-        # Save the processed image
-        cv2.imwrite(output_path, processed_img)
-
-        return send_file(output_path, mimetype='image/jpeg')
  
 # @app.route('/image_folder_preprocess', methods=['GET'])
 # def process_image_folder():#IMAGE SPLIT FUNCTIONS FOR THE DATASET 
