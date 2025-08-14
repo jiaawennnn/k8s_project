@@ -1,23 +1,33 @@
 import io
 import os
 import numpy as np
-import cv2
 from PIL import Image
 from flask import Flask, request, jsonify
-from preprocessing.preprocessing import full_analysis_pipeline
-# from model_loader import load_model 
 import tensorflow as tf
+import requests
 
 # Flask app
 app = Flask(__name__)
 
-# # To be added after having the model
-# MODEL_PATH = "/app/model/model.h5" 
-# if not os.path.exists(MODEL_PATH):
-#     raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
+# Kubernetes service URLs
+PREPROCESSING_URL = os.getenv("PREPROCESSING_URL", "http://preprocess-svc:5001/preprocess")
+MODEL_PATH = os.getenv("MODEL_PATH", "/app/model/model.h5")
 
-# model = tf.keras.models.load_model(MODEL_PATH)
-# model.eval()  
+# Track last modified time
+last_loaded_time = 0
+model = None
+
+# Auto update model if the model has changed
+def load_model_if_updated():
+    global last_loaded_time, model
+    if not os.path.exists(MODEL_PATH):
+        raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
+
+    modified_time = os.path.getmtime(MODEL_PATH)
+    if modified_time != last_loaded_time:
+        print(f"Reloading model from {MODEL_PATH}...")
+        model = tf.keras.models.load_model(MODEL_PATH)
+        last_loaded_time = modified_time
 
 @app.route("/health", methods=["GET"])
 def health_check():
@@ -25,36 +35,36 @@ def health_check():
 
 @app.route("/inference", methods=["POST"])
 def inference():
-    if "file" not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
-
+    if "image" not in request.files:
+        return jsonify({"error": "No image uploaded"}), 400
+    
     try:
-        file = request.files["file"]
+        #Receive uploaded image from UI
+        user_image = request.files["image"]
+        img_bytes = io.BytesIO(user_image.read())  # read once
+        img_pil = Image.open(img_bytes).convert("RGB")
+        img_bytes.seek(0)  # reset pointer for sending
+        
+        #Sends image to preprocessing pod
+        files = {"file": (user_image.filename, img_bytes, user_image.content_type)}
+        response_preprocess = requests.post(PREPROCESSING_URL, files=files)
+        if response_preprocess.status_code != 200:
+            return jsonify({"error": "Preprocessing pod failed"}), 500
 
-        # Load uploaded image as numpy array (BGR for OpenCV)
-        img_pil = Image.open(io.BytesIO(file.read())).convert("RGB")
-        img_np = np.array(img_pil)[:, :, ::-1]  # RGB to BGR
-
-        processed_img = full_analysis_pipeline(img_np)
-
-        # Convert back to RGB PIL image
-        processed_img_rgb = cv2.cvtColor(processed_img, cv2.COLOR_BGR2RGB)
-        processed_pil = Image.fromarray(processed_img_rgb)
-
-        # Convert to numpy array and scale if needed
-        input_array = np.array(processed_pil).astype('float32') / 255.0  # Normalize if needed
-
-        # Add batch dimension
-        input_tensor = np.expand_dims(input_array, axis=0)
+        processed = np.array(response_preprocess.json()["processed_data"])
+        processed_array = np.expand_dims(processed, axis=0)
 
         # Run inference
-        predictions = model.predict(input_tensor)
+        predictions = model.predict(processed_array)
+        confidence = float(predictions[0][0])
+        predicted_class = 1 if confidence >= 0.5 else 0
 
-        # Assuming binary classification, adjust as needed
-        predicted_class = np.argmax(predictions, axis=1)[0]
-        confidence = float(np.max(tf.nn.softmax(predictions)))
 
-        result_label = "AI-generated" if predicted_class == 1 else "Human-drawn"
+        result_label = "AI-generated" if predicted_class == 1 else "Real"
+        
+        #logging reference
+        print(f"Predicted class: {predicted_class}, confidence: {confidence}")
+
 
         return jsonify({
             "label": result_label,

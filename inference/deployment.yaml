@@ -19,10 +19,24 @@ spec:
     spec:
       containers:
       - name: inference
-        image: inference:latest
+        image: ying703/inference:latest #adjust the dockerhub username accordingly
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5003
-        livenessProbe:
+        env:
+        - name: MODEL_PATH
+          value: "/app/model/model.h5"
+        - name: PREPROCESSING_URL
+          value: "http://preprocess-svc:5001/preprocess"
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        #for self healing
+        livenessProbe:  
           httpGet:
             path: /health
             port: 5003
@@ -35,9 +49,9 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 5
         volumeMounts:
-        - name: model-volume
+        - name: model-storage
           mountPath: /app/model
       volumes:
-      - name: model-volume
+      - name: model-storage
         persistentVolumeClaim:
           claimName: model-pvc
