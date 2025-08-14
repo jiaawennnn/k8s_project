@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: training-service
+spec:
+  selector:
+    app: model-training        # must match the labels in deployment.yaml
+  ports:
+    - protocol: TCP
+      port: 5002              # port people will use to reach it
+      targetPort: 5002       # port your app.py listens on
+  type: ClusterIP   
