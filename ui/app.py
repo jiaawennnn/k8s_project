@@ -98,19 +98,39 @@ def predict():
 #     # Step 1: Preprocess the image
 #         preprocess_response = requests.post(
 #             PREPROCESSING_URL, 
-#             files={"image": (filename, image_bytes)})
+#             files={"image": (filename, image_bytes)}
+#)
         
 #         if preprocess_response.status_code != 200:
 #             print("Preprocessing failed:", preprocess_response.text)
 #             return render_template("predict.html", error="Preprocessing failed")
     
 #         preprocessed_image = preprocess_response.content
+#
+#        # Step 2: Send original + preprocessed image to Model container
+#        model_response = requests.post(
+#            MODEL_URL,
+#            files={
+#                "original_image": (filename, image_bytes),
+#                "preprocessed_image": ("preprocessed_" + filename, preprocessed_image)
+#            }
+#        )
+#        if model_response.status_code != 200:
+#           return render_template("predict.html", error="Model processing failed")
+#
+#        # Model container should return whatever outputs needed by inference
+#        model_outputs = model_response.content  # could be a file or bytes
 
-#         # Step 2: Send to inference container
+#         # Step 4: Send to inference container
 #         inference_response = requests.post(
 #             INFERENCE_URL,
-#             files={"image": ("preprocessed_" + filename, preprocessed_image)}
+#             files={                
+#                "original_image": (filename, image_bytes),
+#                "preprocessed_image": ("preprocessed_" + filename, preprocessed_image),
+#                "model_output": ("model_output.bin", model_outputs)
+#             }
 #         )
+
 #         if inference_response.status_code != 200:
 #             print("Inference failed:", inference_response.text)
 #             return render_template("predict.html", error="Inference failed")
@@ -120,7 +140,7 @@ def predict():
 #         confidence = result["confidence"]
 #         timestamp = datetime.now()
 
-#         # Step 3: Save to database
+#         # Step 4: Save to database
 #         prediction_id = save_image_to_db(
 #             filename,
 #             image_bytes,  # original uploaded image
