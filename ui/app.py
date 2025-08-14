@@ -101,6 +101,7 @@ def predict():
 #             files={"image": (filename, image_bytes)})
         
 #         if preprocess_response.status_code != 200:
+#             print("Preprocessing failed:", preprocess_response.text)
 #             return render_template("predict.html", error="Preprocessing failed")
     
 #         preprocessed_image = preprocess_response.content
@@ -111,6 +112,7 @@ def predict():
 #             files={"image": ("preprocessed_" + filename, preprocessed_image)}
 #         )
 #         if inference_response.status_code != 200:
+#             print("Inference failed:", inference_response.text)
 #             return render_template("predict.html", error="Inference failed")
 
 #         result = inference_response.json()
