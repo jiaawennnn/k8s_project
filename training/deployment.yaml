@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: model-training
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: model-training
@@ -11,12 +11,12 @@ spec:
     metadata:
       labels:
         app: model-training
-
     spec:
       restartPolicy: Always
       containers:
       - name: training
-        image: krystl123/training-model:latest
+        image: yoshana/training-model:latest
+        imagePullPolicy: Always
         command: ["python", "train.py"]
         resources:
           limits:
@@ -27,16 +27,16 @@ spec:
             memory: "2Gi"
         volumeMounts:
         - name: training-data
-          mountPath: /app/data
+          mountPath: /data
         - name: model-output
-          mountPath: /app/saved_models
+          mountPath: /data/saved_model
       volumes:
       - name: training-data
         hostPath:
           path: /path/on/host/data
       - name: model-output
-        hostPath:
-          path: /path/on/host/saved_models
+        persistentVolumeClaim:
+          claimName: model-pvc
  
 
 

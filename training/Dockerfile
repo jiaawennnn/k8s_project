@@ -1,8 +1,11 @@
-FROM python:3.10.10
+# Use a base image with Python and needed libraries
+FROM python:3.12-slim
 
+# Set working directory inside container
 WORKDIR /training
 
-COPY requirements.txt .
+# Copy requirements and install
+COPY training/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY .  .
