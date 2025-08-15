@@ -1,44 +1,52 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, Response
-from kubernetes import client, config
+from flask import Flask, render_template, request, redirect, url_for, Response
 from werkzeug.utils import secure_filename
 import base64
 import psycopg2
 from datetime import datetime
+import os
 import requests
 
 app = Flask(__name__)
 
+with open("dashboard-token.txt") as f:
+    DASHBOARD_TOKEN = f.read().strip()
+
 # url for the containers
-PREPROCESSING_URL = "http://preprocess:5001/preprocess"
-TRAINING_URL = "http://training:5002/train"
-INFERENCE_URL = "http://inference:5003/inference"
+PREPROCESSING_URL = "http://preprocess-svc:5001/preprocess"
+# TRAINING_URL = "http://training-service:5002/train"
+INFERENCE_URL = "http://inference-service:5003/inference"
 K8S_DASHBOARD_URL = "http://127.0.0.1:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/"
 
+DB_HOST = os.getenv("DB_HOST", "localhost")  # service name of your Postgres
+DB_PORT = os.getenv("DB_PORT", 5432)
+DB_USER = os.getenv("DB_USER", "wonwoo")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "wonwoo")
+DB_NAME = os.getenv("DB_NAME", "predictions_db")
+
 # Create connection
-conn = psycopg2.connect(
-    host = 'localhost',
-    dbname = 'predictions_db',
-    user = 'wonwoo',
-    password = 'wonwoo',
-    port=5432
-)
+def get_db_connection():
+    return psycopg2.connect(
+    host = DB_HOST,
+    dbname = DB_NAME,
+    user = DB_USER,
+    password = DB_PASSWORD,
+    port=DB_PORT
+    )
 
 def save_image_to_db(filename, image_bytes, label, confidence, timestamp, feedback=None):
     try:
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO prediction_history (filename, image_bytes, label, confidence, timestamp, feedback)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            RETURNING id
-        """, (filename, psycopg2.Binary(image_bytes), label, confidence, timestamp, feedback))
-        prediction_id = cur.fetchone()[0]
-        conn.commit()
-        cur.close()
-        return prediction_id
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO prediction_history (filename, image_bytes, label, confidence, timestamp, feedback)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                """, (filename, psycopg2.Binary(image_bytes), label, confidence, timestamp, feedback))
+                prediction_id = cur.fetchone()[0]
+                return prediction_id
 
     except Exception as e:
-        conn.rollback()  # <-- IMPORTANT: reset failed transaction
-        print("Database error:", e)
+        print("Database error (save_image_to_db):", e)
         return None
     
 @app.route('/')
@@ -95,52 +103,25 @@ def predict():
 #     image_bytes = image_file.read()
     
 #     try:
-#     # Step 1: Preprocess the image
+#     # Step 1: Send the image over to preprocessing container
 #         preprocess_response = requests.post(
 #             PREPROCESSING_URL, 
 #             files={"image": (filename, image_bytes)}
-#)
+#         )
         
 #         if preprocess_response.status_code != 200:
 #             print("Preprocessing failed:", preprocess_response.text)
 #             return render_template("predict.html", error="Preprocessing failed")
-    
-#         preprocessed_image = preprocess_response.content
-#
-#        # Step 2: Send original + preprocessed image to Model container
-#        model_response = requests.post(
-#            MODEL_URL,
-#            files={
-#                "original_image": (filename, image_bytes),
-#                "preprocessed_image": ("preprocessed_" + filename, preprocessed_image)
-#            }
-#        )
-#        if model_response.status_code != 200:
-#           return render_template("predict.html", error="Model processing failed")
-#
-#        # Model container should return whatever outputs needed by inference
-#        model_outputs = model_response.content  # could be a file or bytes
 
-#         # Step 4: Send to inference container
-#         inference_response = requests.post(
-#             INFERENCE_URL,
-#             files={                
-#                "original_image": (filename, image_bytes),
-#                "preprocessed_image": ("preprocessed_" + filename, preprocessed_image),
-#                "model_output": ("model_output.bin", model_outputs)
-#             }
-#         )
-
-#         if inference_response.status_code != 200:
-#             print("Inference failed:", inference_response.text)
-#             return render_template("predict.html", error="Inference failed")
-
+#         # Step 2: Get inference results from preprocessing
 #         result = inference_response.json()
-#         label = result["label"]
-#         confidence = result["confidence"]
+#         inference_result = result.get("inference_result", {})
+
+#         label = inference_result.get("label", "Unknown")
+#         confidence = inference_result.get("confidence", 0.0)
 #         timestamp = datetime.now()
 
-#         # Step 4: Save to database
+#         # Step 3: Save to original image + results to database
 #         prediction_id = save_image_to_db(
 #             filename,
 #             image_bytes,  # original uploaded image
@@ -148,11 +129,8 @@ def predict():
 #             confidence,
 #             timestamp
 #         )
-
-#         if not prediction_id:
-#             raise Exception("Database save failed")
         
-#         # Show image preview on result page
+#         # Step 4: Display results on UI
 #         return render_template(
 #                 "predict.html",
 #                 image_bytes="data:image/jpeg;base64," + base64.b64encode(image_bytes).decode("utf-8"),
@@ -177,68 +155,48 @@ def submit_feedback():
         return redirect(url_for('history'))
 
     try:
-        cur = conn.cursor()
-        cur.execute("UPDATE prediction_history SET feedback = %s WHERE id = %s",
-                    (feedback, int(prediction_id)))
-        conn.commit()
-        cur.close()
-        print(f"Feedback '{feedback}' saved for prediction_id {prediction_id}")
-    
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("UPDATE prediction_history SET feedback = %s WHERE id = %s",
+                            (feedback, int(prediction_id)))
+                print(f"Feedback '{feedback}' saved for prediction_id {prediction_id}")
+        
     except Exception as e:
         print(f"Error updating feedback: {e}")
-        conn.rollback()
 
     return redirect(url_for('history'))
 
 @app.route('/history', methods=["GET"])
 def history():
-    cur = conn.cursor()
-    cur.execute("SELECT id, filename, image_bytes, label, confidence, timestamp, feedback FROM prediction_history ORDER BY timestamp DESC")
-    rows = cur.fetchall()
-    cur.close()
-    
     history = []
-    for pid, filename, image_bytes, label, confidence, timestamp, feedback in rows:
-        history.append({
-            'id': pid,
-            'filename': filename,
-            'image_bytes': "data:image/jpeg;base64," + base64.b64encode(image_bytes).decode('utf-8'),
-            'label': label,
-            'confidence': confidence,
-            'timestamp': timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-            'feedback': feedback if feedback else "No feedback provided"
-        })
-    print(f"Returning {len(history)} records")
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, filename, image_bytes, label, confidence, timestamp, feedback FROM prediction_history ORDER BY timestamp DESC")
+                rows = cur.fetchall()
+                
+                for pid, filename, image_bytes, label, confidence, timestamp, feedback in rows:
+                    history.append({
+                        'id': pid,
+                        'filename': filename,
+                        'image_bytes': "data:image/jpeg;base64," + base64.b64encode(image_bytes).decode('utf-8'),
+                        'label': label,
+                        'confidence': confidence,
+                        'timestamp': timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                        'feedback': feedback if feedback else "No feedback provided"
+                    })
+
+        print(f"Returning {len(history)} records")    
+        return render_template('history.html', history=history, current_page="history")
+
+    except Exception as e:
+        print("Database error:", e)
+    
     return render_template('history.html', history=history, current_page="history")
 
 @app.route('/traffic')
 def traffic():
     return render_template('traffic.html', current_page="traffic")
-
-@app.route('/k8s-dashboard/', defaults={'path': ''})
-@app.route('/k8s-dashboard/<path:path>', methods=["GET", "POST"])
-def proxy_dashboard(path):
-    # Build full URL to dashboard
-    target_url = f"{K8S_DASHBOARD_URL}{path}"
-
-    try:
-        # Forward request to Kubernetes Dashboard
-        resp = requests.request(
-            method=request.method,
-            url=target_url,
-            headers={k: v for k, v in request.headers if k.lower() != 'host'},
-            data=request.get_data(),
-            cookies=request.cookies,
-            allow_redirects=False
-        )
-
-        # Return the response
-        excluded_headers = ['content-encoding', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in resp.headers.items() if name.lower() not in excluded_headers]
-        return Response(resp.content, resp.status_code, headers)
-
-    except requests.exceptions.RequestException as e:
-        return f"Error connecting to Kubernetes Dashboard: {str(e)}", 500
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
