@@ -3,9 +3,11 @@ kind: Service
 metadata:
   name: ui-svc
 spec:
+  type: Nopeport
   selector:
     app: ui
   ports:
     - port: 5000     
       targetPort: 5000   
-  type: ClusterIP
+      nodePort: 30080
+  

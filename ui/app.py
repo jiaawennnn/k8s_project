@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, Response
+from flask import Flask, render_template, request, redirect, url_for, Response, jsonify
 from werkzeug.utils import secure_filename
 import base64
 import psycopg2
@@ -8,13 +8,9 @@ import requests
 
 app = Flask(__name__)
 
-with open("dashboard-token.txt") as f:
-    DASHBOARD_TOKEN = f.read().strip()
-
 # url for the containers
-PREPROCESSING_URL = "http://preprocess-svc:5001/preprocess"
-# TRAINING_URL = "http://training-service:5002/train"
-INFERENCE_URL = "http://inference-service:5003/inference"
+PREPROCESSING_URL = "http://localhost:5001/preprocess"
+INFERENCE_URL = "http://localhost:5003/inference"
 K8S_DASHBOARD_URL = "http://127.0.0.1:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/"
 
 DB_HOST = os.getenv("DB_HOST", "localhost")  # service name of your Postgres
@@ -58,40 +54,9 @@ def prediction_page():
     return render_template("predict.html" , current_page="predict")
 
 # upload user's image, sends it off for prediction, retrieves prediction result
-@app.route("/predict", methods=["POST"])
+# @app.route("/predict", methods=["POST"])
 
 # this one is just to test if the routing works without image preprocessing and inference
-def predict():
-    if "image" not in request.files:
-        print("No image in request.files")
-        return render_template("predict.html", error="No image uploaded")
-
-    image_file = request.files["image"]
-    print(f"Received file: {image_file.filename}")
-    filename = secure_filename(image_file.filename)
-    image_bytes = image_file.read()
-
-    # Dummy values for testing
-    label = "Real (Not AI Generated)"
-    confidence = 0.95
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    # Save all to DB
-    prediction_id = save_image_to_db(filename, image_bytes, label, confidence, timestamp)
-    if not prediction_id:
-        return render_template("predict.html", error="Failed to save to database")
-    
-    return render_template("predict.html", 
-                            image_bytes="data:image/jpeg;base64," + base64.b64encode(image_bytes).decode('utf-8'),
-                            label=label,
-                            confidence=confidence,
-                            timestamp=timestamp,
-                            prediction_id=prediction_id,
-                            current_page="predict")
-
-# -----------------------------------------------------------------
-# Sends the image to the preprocessing and inference containers
-
 # def predict():
 #     if "image" not in request.files:
 #         print("No image in request.files")
@@ -101,48 +66,80 @@ def predict():
 #     print(f"Received file: {image_file.filename}")
 #     filename = secure_filename(image_file.filename)
 #     image_bytes = image_file.read()
+
+#     # Dummy values for testing
+#     label = "Real (Not AI Generated)"
+#     confidence = 0.95
+#     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+#     # Save all to DB
+#     prediction_id = save_image_to_db(filename, image_bytes, label, confidence, timestamp)
+#     if not prediction_id:
+#         return render_template("predict.html", error="Failed to save to database")
     
-#     try:
-#     # Step 1: Send the image over to preprocessing container
-#         preprocess_response = requests.post(
-#             PREPROCESSING_URL, 
-#             files={"image": (filename, image_bytes)}
-#         )
+#     return render_template("predict.html", 
+#                             image_bytes="data:image/jpeg;base64," + base64.b64encode(image_bytes).decode('utf-8'),
+#                             label=label,
+#                             confidence=confidence,
+#                             timestamp=timestamp,
+#                             prediction_id=prediction_id,
+#                             current_page="predict")
+
+# -----------------------------------------------------------------
+# Sends the image to the preprocessing and inference containers
+@app.route("/predict", methods=["POST"])
+def predict():
+    # Check if there is an image in the request 
+    if "image" not in request.files:
+        print("No image in request.files")
+        return render_template("predict.html", error="No image uploaded")
+
+    # Read the image file from the request
+    image_file = request.files["image"]
+    print(f"Received file: {image_file.filename}")
+    filename = secure_filename(image_file.filename)
+    image_bytes = image_file.read()
+    
+    try:
+    # Step 1: Send the image over to preprocessing container
+        preprocess_response = requests.post(
+            "http://preprocess-svc:5001/preprocess", 
+            files={"image": (filename, image_bytes, "image/jpeg")}
+        )
+        #Handle errors from preprocessing
+        if preprocess_response.status_code != 200:
+            print("Preprocessing failed:", preprocess_response.text)
+            return render_template("predict.html", error="Preprocessing failed")
         
-#         if preprocess_response.status_code != 200:
-#             print("Preprocessing failed:", preprocess_response.text)
-#             return render_template("predict.html", error="Preprocessing failed")
+        #Return for the Processed Container 
+        tagged_image = preprocess_response.json()
 
-#         # Step 2: Get inference results from preprocessing
-#         result = inference_response.json()
-#         inference_result = result.get("inference_result", {})
+        label = tagged_image.get("label", "Unknown")
+        confidence = tagged_image.get("confidence", 0.0)
+        timestamp = datetime.now()
 
-#         label = inference_result.get("label", "Unknown")
-#         confidence = inference_result.get("confidence", 0.0)
-#         timestamp = datetime.now()
-
-#         # Step 3: Save to original image + results to database
-#         prediction_id = save_image_to_db(
-#             filename,
-#             image_bytes,  # original uploaded image
-#             label,
-#             confidence,
-#             timestamp
-#         )
+        # Step 3: Save to original image + results to database
+        prediction_id = save_image_to_db(
+            filename,
+            image_bytes,  # original uploaded image
+            label,
+            confidence,
+            timestamp
+        )
         
-#         # Step 4: Display results on UI
-#         return render_template(
-#                 "predict.html",
-#                 image_bytes="data:image/jpeg;base64," + base64.b64encode(image_bytes).decode("utf-8"),
-#                 label=label,
-#                 confidence=confidence,
-#                 timestamp=timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-#                 prediction_id=prediction_id
-#             )
+        # Step 4: Display results on UI
+        return render_template(
+                "predict.html",
+                image_bytes="data:image/jpeg;base64," + base64.b64encode(image_bytes).decode("utf-8"),
+                label=label,
+                confidence=confidence,
+                timestamp=timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                prediction_id=prediction_id
+            )
 
-#     except Exception as e:
-#         print(f"Error in prediction: {e}")
-#         return render_template("predict.html", error=str(e))
+    except Exception as e:
+        print(f"Error in prediction: {e}")
+        return render_template("predict.html", error=str(e))
 
 # -----------------------------------------------------------------
 

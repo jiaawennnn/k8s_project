@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: ui
-        image: wldkdnps/ui:v7 # Replace with your built UI image
+        image: yoshana/ui:latest # Replace with your built UI image
         ports:
         - containerPort: 5000
         imagePullPolicy: Always
