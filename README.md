@@ -18,8 +18,11 @@ minikube start
 
 Build the image:
 ```
-docker build -t wldkdnps/ui:latest ./ui
-docker push wldkdnps/ui:latest
+docker build -t wldkdnps/ui:v7 -f ui/Dockerfile .
+docker push wldkdnps/ui:v7
+kubectl set image deployment/ui ui=wldkdnps/ui:v7
+
+kubectl rollout restart deployment/ui
 ```
 
 Run these to create database resources:
@@ -31,12 +34,12 @@ kubectl apply -f db/deployment.yaml
 kubectl apply -f db/service.yaml
 
 kubectl apply -f ui/deployment.yaml
+kubectl apply -f ui/service-ui.yaml
 
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
 
 kubectl apply -f dashboard/dashboard-adminuser.yaml -n kubernetes-dashboard
 kubectl apply -f dashboard/dashboard-clusterrole.yaml -n kubernetes-dashboard
-kubectl apply -f dashboard/dashboard-secret.yaml -n kubernetes-dashboard
 ```
 ^ **Unless the code is edited, this only needs to be run once.**
 
@@ -65,6 +68,7 @@ postgres-55869659f-xzlp7   1/1     Running   0          48s
 Port-forward the PostgresSQL service to the local machine:
 ```
 kubectl port-forward svc/postgres 5432:5432
+kubectl port-forward svc/ui-svc 5000:5000
 ```
 ## If successful, 
 You should see this in terminal which shows that it has been connected.
