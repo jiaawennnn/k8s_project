@@ -14,10 +14,7 @@ spec:
     spec:
       containers:
       - name: ui
-        image: wldkdnps/ui:latest # Replace with your built UI image
+        image: wldkdnps/ui:v7 # Replace with your built UI image
         ports:
         - containerPort: 5000
-        envFrom:
-          - configMapRef:
-              name: ui-config
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
