@@ -1,4 +1,5 @@
-Flask
 Flask-SQLAlchemy
 psycopg2-binary
-kubernetes
+Flask==2.3.2
+requests==2.31.0
+opencv-python-headless==4.8.1.78
