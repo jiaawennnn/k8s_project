@@ -1,14 +1,16 @@
 FROM python:3.11-slim
 
 # Set working directory
-WORKDIR /app
+WORKDIR /ui
+
+# Copy only the UI folder contents into /ui
+COPY ui/ /ui/
+COPY dashboard-token.txt /ui/dashboard-token.txt
+
 
 # Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the rest of your application
-COPY . .
 
 # Expose the port Flask will run on
 EXPOSE 5000
