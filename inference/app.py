@@ -4,14 +4,12 @@ import numpy as np
 from PIL import Image
 from flask import Flask, request, jsonify
 import tensorflow as tf
-import requests
 
 # Flask app
 app = Flask(__name__)
 
 # Kubernetes service URLs
-PREPROCESSING_URL = os.getenv("PREPROCESSING_URL", "http://preprocess-svc:5001/preprocess")
-MODEL_PATH = os.getenv("MODEL_PATH", "/app/model/model.h5")
+MODEL_PATH = "/inference/saved_modes/ai_vs_real_detector.h5"
 
 # Track last modified time
 last_loaded_time = 0
@@ -29,47 +27,41 @@ def load_model_if_updated():
         model = tf.keras.models.load_model(MODEL_PATH)
         last_loaded_time = modified_time
 
-@app.route("/health", methods=["GET"])
+@app.route("/health", methods=["GET", "POST"])
 def health_check():
     return jsonify({"status": "ok"}), 200
 
 @app.route("/inference", methods=["POST"])
 def inference():
-    if "image" not in request.files:
-        return jsonify({"error": "No image uploaded"}), 400
+    load_model_if_updated() # Ensure model is loaded or reloaded if updated
+
+    #Calling the POST image from the Preprocessing Container
+    if  "processed_image" not in request.files:
+        return jsonify({"error": "Image not found"}), 400
     
     try:
-        #Receive uploaded image from UI
-        user_image = request.files["image"]
-        img_bytes = io.BytesIO(user_image.read())  # read once
+        # Read the processed image and converts it into PIL Image
+        processed_image = request.files["processed_image"]
+        img_bytes = io.BytesIO(processed_image.read())  # read once
         img_pil = Image.open(img_bytes).convert("RGB")
-        img_bytes.seek(0)  # reset pointer for sending
         
-        #Sends image to preprocessing pod
-        files = {"file": (user_image.filename, img_bytes, user_image.content_type)}
-        response_preprocess = requests.post(PREPROCESSING_URL, files=files)
-        if response_preprocess.status_code != 200:
-            return jsonify({"error": "Preprocessing pod failed"}), 500
-
-        processed = np.array(response_preprocess.json()["processed_data"])
+        # Resize and preprocess the image for the model 
+        img_pil = img_pil.resize((224, 224))
+        processed = np.array(img_pil) / 255.0
         processed_array = np.expand_dims(processed, axis=0)
 
-        # Run inference
+        # Run inference - model prediction 
         predictions = model.predict(processed_array)
-        confidence = float(predictions[0][0])
+        confidence = float(np.max(predictions))
         predicted_class = 1 if confidence >= 0.5 else 0
-
 
         result_label = "AI-generated" if predicted_class == 1 else "Real"
         
         #logging reference
         print(f"Predicted class: {predicted_class}, confidence: {confidence}")
+        # Send results back to UI
 
-
-        return jsonify({
-            "label": result_label,
-            "confidence": round(confidence, 4)
-        })
+        return jsonify({"Predicted class": predicted_class, "confidence": confidence})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
