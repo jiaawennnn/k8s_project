@@ -8,6 +8,7 @@ import io
 import base64
 
 app = Flask(__name__)
+
 @app.route("/")
 def index():
     return "Preprocessing Service is running", 200
@@ -20,34 +21,40 @@ def health():
 def ready():
     return "OK", 200
 
-@app.route('/preprocess', methods=['POST'])
-def process_images():
+@app.route('/preprocess', methods=['POST', "GET"])
+def preprocess():
     # Receive the image from the UI
     if 'image' not in request.files:
         return jsonify({"error": "No images provided"}), 400
-    
-    #Read the image file 
-    image_file = request.files['image']
-    image_bytes = io.BytesIO(image_file.read())
-    image_file.seek(0)
 
     try:
+        #Read the image file 
+        image_file = request.files['image']
+        raw_image = image_file.read()
+        image_bytes = io.BytesIO(raw_image)
+
+        image_bytes.seek(0)  # Reset the stream position to the beginning
+        file_bytes = np.frombuffer(image_bytes.read(), np.uint8)
+        img_array = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)  # BGR image
+
         # Call your pipeline, do prepocessing 
-        processed_img = full_analysis_pipeline(image_bytes)
+        processed_img = full_analysis_pipeline(img_array)
 
         #Encode te processed image to bytes
         _, img_encoded = cv2.imencode('.jpg', processed_img)
         processed_bytes = io.BytesIO(img_encoded.tobytes())
-        processed_bytes.seek(0)
+        processed_bytes.seek(0)  # Reset the stream position to the beginning
 
         # Post the porcessed image to the inference container
-        inference = requests.post("http://inference-svc:5003/inference", 
-                          files={"processed_image": ("processed.jpg", processed_bytes, "image/jpeg")})
+        inference = requests.post(
+            "http://inference-svc:5003/inference", 
+            files={"processed_image": ("processed.jpg", processed_bytes, "image/jpeg")})
+        
+        if inference.status_code != 200:
+            return jsonify({"error": "Inference failed"}), 500
 
         # Return labels of the processed image
         prediction = inference.json()
-        image_file.seek(0)  # Reset the file pointer to the beginning
-        raw_image = image_file.read()  # Read the original image bytes  
 
         # Sending the iamge, label and confidence back to the UI
         tagged_result = {
@@ -55,6 +62,7 @@ def process_images():
             "label": prediction['Predicted class'],
             "confidence": prediction['confidence']
         }
+
         return jsonify(tagged_result)
 
     except Exception as e:
@@ -102,7 +110,6 @@ def process_images():
 #             print(f"Processed {image_count} images", end='\r')
 
 #     return f"\nTotal processed images: {image_count}", 200
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)
