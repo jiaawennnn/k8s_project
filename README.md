@@ -1,6 +1,6 @@
-# k8s_project
+# 307 Kubernetes + Docker project
 
-## For database set up
+## For Application set up
 
 **Note: Ensure that docker is up and running before running any commands.**
 \
@@ -16,16 +16,24 @@ Then, start a minikube cluster:
 minikube start
 ```
 
-Build the image:
-```
-docker build -t wldkdnps/ui:v7 -f ui/Dockerfile .
-docker push wldkdnps/ui:v7
-kubectl set image deployment/ui ui=wldkdnps/ui:v7
+Build the images:
 
-kubectl rollout restart deployment/ui
+*Please replace the dockerhub username, to your dockerhub username*
+```
+docker build -t <docker_hub_username>/ui:latest -f ui/Dockerfile . 
+docker push <docker_hub_username>/ui:latest
+
+docker build -t <docker_hub_username>/preprocess-image -f preprocessing/Dockerfile .
+docker push <docker_hub_username>/preprocess-image
+
+docker build -t <docker_hub_username>/training-model:latest -f training/Dockerfile . 
+docker push <docker_hub_username>/training-model:latest
+
+docker build -t <docker_hub_username>/inference-image:latest -f inference/Dockerfile . 
+docker push <docker_hub_username>/inference-image:latest
 ```
 
-Run these to create database resources:
+Run these to create database and application resources:
 ```
 kubectl apply -f db/pv.yaml
 kubectl apply -f db/pvc.yaml
@@ -40,8 +48,25 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/a
 
 kubectl apply -f dashboard/dashboard-adminuser.yaml -n kubernetes-dashboard
 kubectl apply -f dashboard/dashboard-clusterrole.yaml -n kubernetes-dashboard
+
+kubectl apply -f preprocessing/deployment.yaml
+kubectl apply -f preprocessing/service.yaml 
+
+kubectl apply -f model-pv-pvc.yaml
+kubectl apply -f training/deployment.yaml
+kubectl apply -f training/service.yaml 
+
+kubectl apply -f inference/deployment.yaml
+kubectl apply -f inference/service.yaml 
+kubectl apply -f inference/hpa.yaml
 ```
 ^ **Unless the code is edited, this only needs to be run once.**
+
+If the code is edited:
+Change the codes according to the yaml files. 
+```
+kubectl rollout restart deployment/<deployment_name> 
+```
 
 To get the secret token:
 ```
@@ -49,7 +74,7 @@ kubectl get secret admin-user -n kubernetes-dashboard -o jsonpath={".data.token"
 
 eyJhbGciOiJSUzI1NiIsImtpZCI6IkFEU1VsdUdxdnB4YjM2R1dTOFRieW95ZzFDME1rdGEwTkpzTGNtaHR6a1UifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJhZG1pbi11c2VyIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImFkbWluLXVzZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiJhM2EyMjM3OS03Yjg5LTRhYzMtYTVkNC1kMzIzZDRhMzk0ZTUiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZXJuZXRlcy1kYXNoYm9hcmQ6YWRtaW4tdXNlciJ9.hLWdAu8CI2H5WB9-tG2PemD_RYWdIoc4_MvV3zP9USkuOsGnxsGQDNNAEo67Xj-4vLHNCpxwGCgWO-umvAE77uUIgWXu0-qxuO51Sw9pPe1NiqeV0Ed-8hAr_BN3QniOHElGLACqneIxHDS7XKpd7lyW88iWzMZOEpCW92QAQzQN-BroSgm3raTw0ix7xjLgqrmQV9PbAEyjZQxO3yb24FBN81C_DlXtRdwMznd8p3cKctkpEf6YGDQ1Sh6H6BhqVJ1MoFx20-_aLxhMMRFnRrDnv-yoGxPqg1PVHEeyGK2mpjeH9bQj8xkIDY4iJ-IC5-vU8FaBSlEbZgbX3BWFtgWFtg
 ```
-To run kubernetes dashboard:
+To run kubernetes dashboard: (Use another terminal for proxy)
 ```
 kubectl proxy
 ```
@@ -58,17 +83,18 @@ To ensure pods are running:
 ```
 kubectl get pod
 ```
-Output should show that all statuses are **Running**:
+Example of Output: 
+
+It should show that all statuses are **Running**:
 ```
 NAME                       READY   STATUS    RESTARTS   AGE
 postgres-55869659f-kpsrp   1/1     Running   0          48s
 postgres-55869659f-twlv9   1/1     Running   0          48s
 postgres-55869659f-xzlp7   1/1     Running   0          48s
 ```
-Port-forward the PostgresSQL service to the local machine:
+Port-forward the PostgresSQL service, database to the local machine:
 ```
 kubectl port-forward svc/postgres 5432:5432
-kubectl port-forward svc/ui-svc 5000:5000
 ```
 ## If successful, 
 You should see this in terminal which shows that it has been connected.
@@ -78,7 +104,6 @@ You should see this in terminal which shows that it has been connected.
 ```
 Forwarding from 127.0.0.1:5432 -> 5432
 Forwarding from [::1]:5432 -> 5432
-Handling connection for 5432
 ```
 
 ## For database connection (Only on first run)
@@ -131,37 +156,20 @@ Display name of connection: localhost
 
 ## For application
 
-Firstly, install all required dependencies.
-```
-pip install -r ui/requirements.txt 
-# use ui/requirements.txt for now
-```
-To upgrade PIP,
-```
-python.exe -m pip install --upgrade pip
-```
-To run app.py,
-```
-python ui/app.py
-```
+Follow this steps to run application successfully: 
 
-## Application will be hosted on: http://127.0.0.1:5000/
+In another Terminal: 
+```
+minikube service ui-svc
+```
+Ensure that the terminal is always running. 
 
-Build the image for Preprocessing: 
-```
-docker build -t <docker_hub_username>/preprocessing-img -f preprocessing/Dockerfile .
-docker push <docker_hub_username>/preprocessing-image
-```
-Run these to create the preprocessing resources 
-```
-kubectl apply -f preprocessing/deployment.yaml
-kubectl apply -f preprocessing/service.yaml
-```
+## Example output from terminal: 
+**Click on the link that is boxed in RED!.**
 
-port-forwarding:
-```
-kubectl port-forward svc/preprocess-svc 5001:5001
-```
+**Hosting Url would change for every run**
+
+![Alt text](data/display_readme.png)
 
 # Troubleshooting
 
