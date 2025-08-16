@@ -11,7 +11,7 @@ app = Flask(__name__)
 # url for the containers
 K8S_DASHBOARD_URL = "http://127.0.0.1:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/"
 
-DB_HOST = os.getenv("DB_HOST", "postgres")  # service name of your Postgres
+DB_HOST = os.getenv("DB_HOST", "localhost")  # service name of your Postgres
 DB_PORT = os.getenv("DB_PORT", 5432)
 DB_USER = os.getenv("DB_USER", "wonwoo")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "wonwoo")
@@ -50,41 +50,6 @@ def home():
 @app.route("/predict", methods=["GET"])
 def prediction_page():
     return render_template("predict.html" , current_page="predict")
-
-# upload user's image, sends it off for prediction, retrieves prediction result
-# @app.route("/predict", methods=["POST"])
-
-# this one is just to test if the routing works without image preprocessing and inference
-# def predict():
-#     if "image" not in request.files:
-#         print("No image in request.files")
-#         return render_template("predict.html", error="No image uploaded")
-
-#     image_file = request.files["image"]
-#     print(f"Received file: {image_file.filename}")
-#     filename = secure_filename(image_file.filename)
-#     image_bytes = image_file.read()
-
-#     # Dummy values for testing
-#     label = "Real (Not AI Generated)"
-#     confidence = 0.95
-#     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-#     # Save all to DB
-#     prediction_id = save_image_to_db(filename, image_bytes, label, confidence, timestamp)
-#     if not prediction_id:
-#         return render_template("predict.html", error="Failed to save to database")
-    
-#     return render_template("predict.html", 
-#                             image_bytes="data:image/jpeg;base64," + base64.b64encode(image_bytes).decode('utf-8'),
-#                             label=label,
-#                             confidence=confidence,
-#                             timestamp=timestamp,
-#                             prediction_id=prediction_id,
-#                             current_page="predict")
-
-# -----------------------------------------------------------------
-# Sends the image to the preprocessing and inference containers
 
 @app.route("/predict", methods=["POST"])
 def predict():
