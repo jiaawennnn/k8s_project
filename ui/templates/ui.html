@@ -21,15 +21,16 @@
         </nav>
     </header>
     
-    <section class="hero">
-        <div class="hero-content">
+    <section class="intro">
+        <div class="intro-content">
             <h1>AI Image Detector</h1>
             <p>Detect whether an image is AI-generated or real in seconds.</p>
-            <a href="{{ url_for('predict') }}"><button class="start-btn">Start Prediction</button></a>
+        </div>
+
+        <div class="intro-button">
+            <a href="{{ url_for('predict') }}">Start Prediction Here!</a>
         </div>
     </section>
-
-    <script src="ui.js"></script>
 
 </body>
 
