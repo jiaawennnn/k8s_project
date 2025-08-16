@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: ui-svc
 spec:
-  type: Nopeport
+  type: NodePort
   selector:
     app: ui
   ports:

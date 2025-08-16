@@ -9,11 +9,9 @@ import requests
 app = Flask(__name__)
 
 # url for the containers
-PREPROCESSING_URL = "http://localhost:5001/preprocess"
-INFERENCE_URL = "http://localhost:5003/inference"
 K8S_DASHBOARD_URL = "http://127.0.0.1:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/"
 
-DB_HOST = os.getenv("DB_HOST", "localhost")  # service name of your Postgres
+DB_HOST = os.getenv("DB_HOST", "postgres")  # service name of your Postgres
 DB_PORT = os.getenv("DB_PORT", 5432)
 DB_USER = os.getenv("DB_USER", "wonwoo")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "wonwoo")
@@ -87,6 +85,7 @@ def prediction_page():
 
 # -----------------------------------------------------------------
 # Sends the image to the preprocessing and inference containers
+
 @app.route("/predict", methods=["POST"])
 def predict():
     # Check if there is an image in the request 
@@ -114,7 +113,18 @@ def predict():
         #Return for the Processed Container 
         tagged_image = preprocess_response.json()
 
-        label = tagged_image.get("label", "Unknown")
+        label_raw = tagged_image.get("label", "Unknown")
+
+        def change(label_raw):
+            if label_raw == 0:
+                label = "AI Generated"
+                return label 
+            else:
+                label = "Real"
+                return label 
+            
+        label = change(label_raw)
+            
         confidence = tagged_image.get("confidence", 0.0)
         timestamp = datetime.now()
 
