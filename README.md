@@ -107,7 +107,7 @@ Host: localhost
 Database: postgres
 Username: wonwoo
 Password: wonwoo
-Port 5432
+Port: 5432
 ```
 - Once created, go to db > prediction > predictions_db > public > Query
 
@@ -131,7 +131,10 @@ CREATE TABLE IF NOT EXISTS prediction_history (
 - Save query for future runs (name it anything you want)
 
 
-## Step 8: Enter the following
+## Step 8: Connecting to Postgres
+- Go to shortcut panel on the left
+- Go to PostgresSQL Explorer and click the '+'
+- Then, enter in the following when the pop up appears:
 ```
 Hostname: localhost
 PostgreSQL user: wonwoo
@@ -147,7 +150,7 @@ Display name of connection: localhost
 ## Step 9: Get the secret token for the dashboard
 To get the secret token for the dashboard, run this command:
 ```
-kubectl get secret admin-user -n kubernetes-dashboard -o jsonpath={".data.token"} | base64 -d
+kubectl -n kubernetes-dashboard create token admin-user
 
 Output will be something like this: 
 eyJhbGciOiJSUzI1NiIsImtpZCI6IkFEU1VsdUdxdnB4YjM2R1dTOFRieW95ZzFDME1rdGEwTkpzTGNtaHR6a1UifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJhZG1pbi11c2VyIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImFkbWluLXVzZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiJhM2EyMjM3OS03Yjg5LTRhYzMtYTVkNC1kMzIzZDRhMzk0ZTUiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZXJuZXRlcy1kYXNoYm9hcmQ6YWRtaW4tdXNlciJ9.hLWdAu8CI2H5WB9-tG2PemD_RYWdIoc4_MvV3zP9USkuOsGnxsGQDNNAEo67Xj-4vLHNCpxwGCgWO-umvAE77uUIgWXu0-qxuO51Sw9pPe1NiqeV0Ed-8hAr_BN3QniOHElGLACqneIxHDS7XKpd7lyW88iWzMZOEpCW92QAQzQN-BroSgm3raTw0ix7xjLgqrmQV9PbAEyjZQxO3yb24FBN81C_DlXtRdwMznd8p3cKctkpEf6YGDQ1Sh6H6BhqVJ1MoFx20-_aLxhMMRFnRrDnv-yoGxPqg1PVHEeyGK2mpjeH9bQj8xkIDY4iJ-IC5-vU8FaBSlEbZgbX3BWFtgWFtg
