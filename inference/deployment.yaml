@@ -19,13 +19,13 @@ spec:
     spec:
       containers:
       - name: inference
-        image: yoshana/inference:latest #adjust the dockerhub username accordingly
+        image: yoshana/inference-image:latest #adjust the dockerhub username accordingly
         imagePullPolicy: Always 
         ports:
         - containerPort: 5003
         env:
         - name: MODEL_PATH
-          value: "/inference/saved_model/ai_vs_real_detector.h5"
+          value: "saved_model/ai_vs_real_detector.h5"
         - name: PREPROCESSING_URL
           value: "http://preprocess-svc:5001/preprocess"
         resources:

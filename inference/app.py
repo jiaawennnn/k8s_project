@@ -9,7 +9,7 @@ import tensorflow as tf
 app = Flask(__name__)
 
 # Kubernetes service URLs
-MODEL_PATH = "/inference/saved_modes/ai_vs_real_detector.h5"
+MODEL_PATH = "saved_model/ai_vs_real_detector.h5"
 
 # Track last modified time
 last_loaded_time = 0
@@ -31,7 +31,7 @@ def load_model_if_updated():
 def health_check():
     return jsonify({"status": "ok"}), 200
 
-@app.route("/inference", methods=["POST"])
+@app.route("/inference", methods=["POST", "GET"])
 def inference():
     load_model_if_updated() # Ensure model is loaded or reloaded if updated
 
