@@ -2,23 +2,28 @@
 
 ## For Application set up
 
-**Note: Ensure that docker is up and running before running any commands.**
-\
-\
+### Before running any commands, please make sure that Docker Desktop is running!
+
+## On the first inital run
+
 **On first run**, delete all instances of minikube in docker:
 - Make sures that there will not be any conflicts.
 - **From second run onwards**, skip running 'minikube delete'.
 ```
 minikube delete
 ```
+
+
 Then, start a minikube cluster:
 ```
 minikube start
 ```
 
-Build the images:
+### Step 1: Build the images required
 
-*Please replace the dockerhub username, to your dockerhub username*
+***Please replace <docker_hub_username> with your dockerhub username***
+\
+***> Dockerhub username is the name of your account in Docker***
 ```
 docker build -t <docker_hub_username>/ui:latest -f ui/Dockerfile . 
 docker push <docker_hub_username>/ui:latest
@@ -33,87 +38,68 @@ docker build -t <docker_hub_username>/inference-image:latest -f inference/Docker
 docker push <docker_hub_username>/inference-image:latest
 ```
 
-Run these to create database and application resources:
+
+## Step 2: Set up service and deploy the containers
+**In Git Bash**, run this command to create the database and application resources:
 ```
-kubectl apply -f db/pv.yaml
-kubectl apply -f db/pvc.yaml
-kubectl apply -f db/configmap.yaml
-kubectl apply -f db/deployment.yaml
-kubectl apply -f db/service.yaml
-
-kubectl apply -f ui/deployment.yaml
-kubectl apply -f ui/service-ui.yaml
-
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
-
-kubectl apply -f dashboard/dashboard-adminuser.yaml -n kubernetes-dashboard
-kubectl apply -f dashboard/dashboard-clusterrole.yaml -n kubernetes-dashboard
-
-kubectl apply -f preprocessing/deployment.yaml
-kubectl apply -f preprocessing/service.yaml 
-
-kubectl apply -f model-pv-pvc.yaml
-kubectl apply -f training/deployment.yaml
-kubectl apply -f training/service.yaml 
-
-kubectl apply -f inference/deployment.yaml
-kubectl apply -f inference/service.yaml 
-kubectl apply -f inference/hpa.yaml
+./run.sh
 ```
 ^ **Unless the code is edited, this only needs to be run once.**
 
-If the code is edited:
-Change the codes according to the yaml files. 
+
+- If the code is edited, change the codes according to the yaml files:
 ```
-kubectl rollout restart deployment/<deployment_name> 
+kubectl rollout restart deployment/<deployment_file_name> 
 ```
 
-To get the secret token:
-```
-kubectl get secret admin-user -n kubernetes-dashboard -o jsonpath={".data.token"} | base64 -d
 
-eyJhbGciOiJSUzI1NiIsImtpZCI6IkFEU1VsdUdxdnB4YjM2R1dTOFRieW95ZzFDME1rdGEwTkpzTGNtaHR6a1UifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJhZG1pbi11c2VyIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImFkbWluLXVzZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiJhM2EyMjM3OS03Yjg5LTRhYzMtYTVkNC1kMzIzZDRhMzk0ZTUiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZXJuZXRlcy1kYXNoYm9hcmQ6YWRtaW4tdXNlciJ9.hLWdAu8CI2H5WB9-tG2PemD_RYWdIoc4_MvV3zP9USkuOsGnxsGQDNNAEo67Xj-4vLHNCpxwGCgWO-umvAE77uUIgWXu0-qxuO51Sw9pPe1NiqeV0Ed-8hAr_BN3QniOHElGLACqneIxHDS7XKpd7lyW88iWzMZOEpCW92QAQzQN-BroSgm3raTw0ix7xjLgqrmQV9PbAEyjZQxO3yb24FBN81C_DlXtRdwMznd8p3cKctkpEf6YGDQ1Sh6H6BhqVJ1MoFx20-_aLxhMMRFnRrDnv-yoGxPqg1PVHEeyGK2mpjeH9bQj8xkIDY4iJ-IC5-vU8FaBSlEbZgbX3BWFtgWFtg
-```
-To run kubernetes dashboard: (Use another terminal for proxy)
-```
-kubectl proxy
-```
-
-To ensure pods are running:
+## Step 3: Ensure all pods are running
+To ensure pods are running, run this command:
 ```
 kubectl get pod
 ```
-Example of Output: 
 
-It should show that all statuses are **Running**:
+
+Example of Output: It should show that all statuses are **Running**
 ```
 NAME                       READY   STATUS    RESTARTS   AGE
 postgres-55869659f-kpsrp   1/1     Running   0          48s
 postgres-55869659f-twlv9   1/1     Running   0          48s
 postgres-55869659f-xzlp7   1/1     Running   0          48s
 ```
+
+## Step 4: Run kubernetes dashboard and expose database 
+To run kubernetes dashboard: (Use another terminal for proxy)
+```
+kubectl proxy
+```
+
+
 Port-forward the PostgresSQL service, database to the local machine:
 ```
 kubectl port-forward svc/postgres 5432:5432
 ```
-## If successful, 
-You should see this in terminal which shows that it has been connected.
-\
-\
-**Note: This terminal must be running in the background for the database connection to work.**
+
+
+-  If successful, you should see this in terminal which shows that it has been connected.
+
+
 ```
 Forwarding from 127.0.0.1:5432 -> 5432
 Forwarding from [::1]:5432 -> 5432
 ```
+**Note: This terminal must be running in the background for the database connection to work.**
 
-## For database connection (Only on first run)
 
-1. Go to **Extensions** and download 
+## Step 5: For database connection (Only on first run)
+- Go to **Extensions** and download 
 - **PostgreSQL by Chris Kolkman**
 - **Database Client** by Database Client
-2. On the left shortcut panel, go to **Database**
-3. Press **Create Connection** and choose **PostgreSQL** as the server type.
-4. Enter in the following information:
+-  On the left shortcut panel, go to **Database**
+-  Press **Create Connection** and choose **PostgreSQL** as the server type.
+
+
+## Step 6: Enter in the table information
 ```
 Name: prediction
 Group: db 
@@ -123,8 +109,11 @@ Username: wonwoo
 Password: wonwoo
 Port 5432
 ```
-5. Once created, go to db > prediction > predictions_db > Query 
-6. Click on **+** to create new query (any name) and enter the following:
+- Once created, go to db > prediction > predictions_db > public > Query
+
+
+## Step 7: Create table
+- Click on **+** to create new query (any name) and enter the following:
 ```
 CREATE TABLE IF NOT EXISTS prediction_history (
   id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -136,12 +125,13 @@ CREATE TABLE IF NOT EXISTS prediction_history (
   feedback TEXT
 );
 ```
-Then, click **Run** or **Ctrl + Enter**
-\
-\
-7. In the shortcut panel on the left, navigate to PostgreSQL Explorer and click on '**+**' to add connection.
-\
-8. Enter the following
+- Then, click **Run** or **Ctrl + Enter**
+
+- In the shortcut panel on the left, navigate to PostgreSQL Explorer and click on '**+**' to add connection.
+- Save query for future runs (name it anything you want)
+
+
+## Step 8: Enter the following
 ```
 Hostname: localhost
 PostgreSQL user: wonwoo
@@ -154,7 +144,16 @@ Click 'Show All Databases'
 Display name of connection: localhost
 ```
 
-## For application
+## Step 9: Get the secret token for the dashboard
+To get the secret token for the dashboard, run this command:
+```
+kubectl get secret admin-user -n kubernetes-dashboard -o jsonpath={".data.token"} | base64 -d
+
+Output will be something like this: 
+eyJhbGciOiJSUzI1NiIsImtpZCI6IkFEU1VsdUdxdnB4YjM2R1dTOFRieW95ZzFDME1rdGEwTkpzTGNtaHR6a1UifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJhZG1pbi11c2VyIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImFkbWluLXVzZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiJhM2EyMjM3OS03Yjg5LTRhYzMtYTVkNC1kMzIzZDRhMzk0ZTUiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZXJuZXRlcy1kYXNoYm9hcmQ6YWRtaW4tdXNlciJ9.hLWdAu8CI2H5WB9-tG2PemD_RYWdIoc4_MvV3zP9USkuOsGnxsGQDNNAEo67Xj-4vLHNCpxwGCgWO-umvAE77uUIgWXu0-qxuO51Sw9pPe1NiqeV0Ed-8hAr_BN3QniOHElGLACqneIxHDS7XKpd7lyW88iWzMZOEpCW92QAQzQN-BroSgm3raTw0ix7xjLgqrmQV9PbAEyjZQxO3yb24FBN81C_DlXtRdwMznd8p3cKctkpEf6YGDQ1Sh6H6BhqVJ1MoFx20-_aLxhMMRFnRrDnv-yoGxPqg1PVHEeyGK2mpjeH9bQj8xkIDY4iJ-IC5-vU8FaBSlEbZgbX3BWFtgWFtg
+``` 
+
+## Step 10: Start application
 
 Follow this steps to run application successfully: 
 
@@ -162,14 +161,86 @@ In another Terminal:
 ```
 minikube service ui-svc
 ```
-Ensure that the terminal is always running. 
+**Ensure that the terminal is always running!**
 
-## Example output from terminal: 
-**Click on the link that is boxed in RED!.**
-
-**Hosting Url would change for every run**
+### Example output from terminal: 
 
 ![Alt text](data/display_readme.png)
+
+- **Click on the link that is boxed in RED!**
+
+- **Hosting Url would change for every run**
+
+
+# From future runs
+**Before running any commands, please make sure that Docker Desktop is running!**
+### Step 1: Set up service and deploy the containers
+**In Git Bash**, run this command to create the database and application resources:
+```
+./run.sh
+```
+
+
+## Step 2: Ensure all pods are running
+```
+kubectl get pod
+```
+Example of Output: It should show that all statuses are **Running**
+```
+NAME                       READY   STATUS    RESTARTS   AGE
+postgres-55869659f-kpsrp   1/1     Running   0          48s
+postgres-55869659f-twlv9   1/1     Running   0          48s
+postgres-55869659f-xzlp7   1/1     Running   0          48s
+```
+
+
+## Step 3: Database
+- Go to the shortcut panel on the left, right click on 'db' and press **refresh**.
+- Go to public > Query 
+- Press on the query file that u have saved initially
+- Click **Run** or Ctrl + Enter
+
+
+## Step 4: Run kubernetes dashboard and expose database 
+To run kubernetes dashboard: (Use another terminal for proxy)
+```
+kubectl proxy
+```
+
+
+Port-forward the PostgresSQL service, database to the local machine:
+```
+kubectl port-forward svc/postgres 5432:5432
+```
+
+
+-  If successful, you should see this in terminal which shows that it has been connected.
+
+
+```
+Forwarding from 127.0.0.1:5432 -> 5432
+Forwarding from [::1]:5432 -> 5432
+```
+**Note: This terminal must be running in the background for the database connection to work.**
+
+## Step 5: Get the secret token for the dashboard
+To get the secret token for the dashboard, run this command:
+```
+kubectl get secret admin-user -n kubernetes-dashboard -o jsonpath={".data.token"} | base64 -d
+
+Output will be something like this: 
+eyJhbGciOiJSUzI1NiIsImtpZCI6IkFEU1VsdUdxdnB4YjM2R1dTOFRieW95ZzFDME1rdGEwTkpzTGNtaHR6a1UifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJhZG1pbi11c2VyIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImFkbWluLXVzZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiJhM2EyMjM3OS03Yjg5LTRhYzMtYTVkNC1kMzIzZDRhMzk0ZTUiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZXJuZXRlcy1kYXNoYm9hcmQ6YWRtaW4tdXNlciJ9.hLWdAu8CI2H5WB9-tG2PemD_RYWdIoc4_MvV3zP9USkuOsGnxsGQDNNAEo67Xj-4vLHNCpxwGCgWO-umvAE77uUIgWXu0-qxuO51Sw9pPe1NiqeV0Ed-8hAr_BN3QniOHElGLACqneIxHDS7XKpd7lyW88iWzMZOEpCW92QAQzQN-BroSgm3raTw0ix7xjLgqrmQV9PbAEyjZQxO3yb24FBN81C_DlXtRdwMznd8p3cKctkpEf6YGDQ1Sh6H6BhqVJ1MoFx20-_aLxhMMRFnRrDnv-yoGxPqg1PVHEeyGK2mpjeH9bQj8xkIDY4iJ-IC5-vU8FaBSlEbZgbX3BWFtgWFtg
+``` 
+
+## Step 10: Start application
+
+Follow this steps to run application successfully: 
+
+In another Terminal: 
+```
+minikube service ui-svc
+```
+**Ensure that the terminal is always running!**
 
 # Troubleshooting
 
