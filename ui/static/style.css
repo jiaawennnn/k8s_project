@@ -1,23 +1,33 @@
 body {
-    background-color: black;
+    background-image: url(background.png);
+    background-position: 50% 50%;
+    background-repeat: no-repeat;
+    background-size: fill;
     text-align: center;
     color: white;
+    border-color: 3px solid red;
+    align-items: center;
+}
+
+
+.start-btn{
+    text-decoration: none;
+    font-size: 50px;
 }
 
 nav {
     display: flex;
     align-items: center;
     justify-content: center;
-    position: relative;
     background-color: #000000;
-    padding: 10px 0;
-    height: 70px;
+    padding: 30px 0;
+    height: 60px;
 }
 
 /* Home icon on left */
 nav .home-icon {
     position: absolute;
-    left: 40px;
+    left: 70px;
     color: white;
     font-size: 24px;
     text-decoration: none;
@@ -53,6 +63,35 @@ nav .nav-links a:visited, nav .nav-links a:link {
     text-decoration: none;
     color: white;
 }
+
+.intro-content {
+    padding-top: 50px;
+    padding-bottom: 50px;
+    
+}
+
+.intro-button {
+    padding: 30px;
+    font-size: 30px;
+}
+
+.intro-button a {
+    color: #ffffff;
+    padding: 10px 20px;
+    font-weight: bolder;
+    text-decoration: none;
+}   
+
+.upload-title {
+    padding-top: 50px;
+    padding-bottom: 50px;
+}
+
+.preview {
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
 
 input[type="file"] {
   /* Hide the default filename text */
