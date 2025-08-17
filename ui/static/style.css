@@ -87,8 +87,8 @@ nav .nav-links a:visited, nav .nav-links a:link {
     padding-bottom: 50px;
 }
 
-.preview {
-    margin-top: 20px;
+#preview {
+    margin-top: 15px;
     margin-bottom: 20px;
 }
 

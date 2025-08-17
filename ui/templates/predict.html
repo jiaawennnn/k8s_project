@@ -23,9 +23,9 @@
     
     <h2 class="upload-title">Upload any image to start prediction!</h2>
 
-    <div class="preview" style="display:none;">
+    <div id="preview" style="display:none;">
         <p>Image chosen for prediction</p>
-        <img id="previewImg" src="" style="width:100px;">
+        <img id="previewImg" src="" style="width: 100%;">
     </div>
 
     <form action="/predict" method="POST" enctype="multipart/form-data">
@@ -34,7 +34,6 @@
     </form>
 
     
-
     {% if image_bytes %}
     <h2>Prediction Result</h2>
     <table>

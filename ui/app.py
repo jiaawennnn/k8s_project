@@ -11,7 +11,7 @@ app = Flask(__name__)
 # url for the containers
 K8S_DASHBOARD_URL = "http://127.0.0.1:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/"
 
-DB_HOST = os.getenv("DB_HOST", "localhost")  # service name of your Postgres
+DB_HOST = os.getenv("DB_HOST", "postgres")  # service name of your Postgres
 DB_PORT = os.getenv("DB_PORT", 5432)
 DB_USER = os.getenv("DB_USER", "wonwoo")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "wonwoo")
@@ -37,6 +37,8 @@ def save_image_to_db(filename, image_bytes, label, confidence, timestamp, feedba
                     RETURNING id
                 """, (filename, psycopg2.Binary(image_bytes), label, confidence, timestamp, feedback))
                 prediction_id = cur.fetchone()[0]
+
+                conn.commit()
                 return prediction_id
 
     except Exception as e:
@@ -89,7 +91,6 @@ def predict():
                 return label 
             
         label = change(label_raw)
-            
         confidence = tagged_image.get("confidence", 0.0)
         timestamp = datetime.now()
 
@@ -132,7 +133,8 @@ def submit_feedback():
                 cur.execute("UPDATE prediction_history SET feedback = %s WHERE id = %s",
                             (feedback, int(prediction_id)))
                 print(f"Feedback '{feedback}' saved for prediction_id {prediction_id}")
-        
+            conn.commit() 
+
     except Exception as e:
         print(f"Error updating feedback: {e}")
 
