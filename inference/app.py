@@ -9,7 +9,7 @@ import tensorflow as tf
 app = Flask(__name__)
 
 # Kubernetes service URLs
-MODEL_PATH = "saved_model/ai_vs_real_detector.h5"
+MODEL_PATH = "saved_model/final_model.h5"
 
 # Track last modified time
 last_loaded_time = 0
@@ -51,14 +51,14 @@ def inference():
         processed_array = np.expand_dims(processed, axis=0)
 
         # Run inference - model prediction 
-        predictions = model.predict(processed_array)
+        predictions = model.predict(processed_array)[0][0]
         confidence = float(np.max(predictions))
         predicted_class = 1 if confidence >= 0.5 else 0
 
-        result_label = "AI-generated" if predicted_class == 1 else "Real"
-        
+        confidence = round(confidence * 100, 2)
+       
         #logging reference
-        print(f"Predicted class: {predicted_class}, confidence: {confidence}")
+        print(f"Predicted class: {predicted_class}, (confidence: {confidence * 100:.2f}%)")
         # Send results back to UI
 
         return jsonify({"Predicted class": predicted_class, "confidence": confidence})
