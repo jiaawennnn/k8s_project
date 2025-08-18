@@ -3,11 +3,7 @@
 
 # This script sets up a Kubernetes environment with Minikube and deploys various services.
 # It applies Persistent Volumes, ConfigMaps, and deployments for Postgres, UI, Preprocessing, Training, and Inference services.
-set -e 
-
-echo "Starting minikube..."
-minikube start
-echo " "
+set -e  
 
 echo "Applying Persistent Volumes and Claims..."
 kubectl apply -f db/pv.yaml
@@ -32,11 +28,6 @@ echo " "
 echo "Deploying Preprocessing service..."
 kubectl apply -f preprocessing/deployment.yaml
 kubectl apply -f preprocessing/service.yaml 
-echo " "
-
-echo "Deploying Training service..."
-kubectl apply -f training/deployment.yaml
-kubectl apply -f training/service.yaml 
 echo " "
 
 echo "Deploying Inference service..."
