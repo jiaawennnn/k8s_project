@@ -1,16 +1,19 @@
 import os
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = "0"
+from pathlib import Path
 
 import tensorflow as tf
 from tensorflow.keras import layers, models, optimizers, Input
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 
+# Ensure the root directory is accessed
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
-
-base_dir = r"C:\Users\chris\OneDrive\Documents\GitHub\k8s_project"
-train_dir= os.path.join(base_dir,"data", "processed_train")
-val_dir = os.path.join(base_dir,"data","processed_val")
+# Define data directories relative to repo root
+train_dir = REPO_ROOT / "data" / "processed_train"
+val_dir   = REPO_ROOT / "data" / "processed_val"
+save_path = REPO_ROOT / "data" / "saved_model" / "final_model.h5"
 
 
 train_datagen = ImageDataGenerator(
@@ -64,5 +67,5 @@ history = model.fit(
     validation_data=val_generator
 )
 
-
-model.save("final_model.h5")
+save_path.parent.mkdir(parents=True, exist_ok=True)  
+model.save(save_path)

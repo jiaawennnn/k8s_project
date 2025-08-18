@@ -19,22 +19,22 @@ spec:
     spec:
       containers:
       - name: inference
-        image: yoshana/inference_img:latest #adjust the dockerhub username accordingly
+        image: ying703/inference-new:latest #adjust the dockerhub username accordingly
         imagePullPolicy: Always 
         ports:
         - containerPort: 5003
         env:
         - name: MODEL_PATH
-          value: "saved_model/final_model.h5"
+          value: "/inference/model/final_model.h5"
         - name: PREPROCESSING_URL
           value: "http://preprocess-svc:5001/preprocess"
         resources:
           requests:
-            cpu: 1
-            memory: 2Gi
+            cpu: 256m
+            memory: 512Mi
           limits:
-            cpu: 2
-            memory: 4Gi
+            cpu: 1
+            memory: 1Gi
         #for self healing
         livenessProbe:  
           httpGet:

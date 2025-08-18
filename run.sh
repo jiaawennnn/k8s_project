@@ -8,7 +8,7 @@ set -e
 echo "Applying Persistent Volumes and Claims..."
 kubectl apply -f db/pv.yaml
 kubectl apply -f db/pvc.yaml
-kubectl apply -f model-pv-pvc.yaml
+kubectl apply -f inference/model-pv-pvc.yaml
 echo " "
 
 echo "Applying ConfigMaps..."
@@ -23,11 +23,28 @@ echo " "
 echo "Deploying UI service..."
 kubectl apply -f ui/deployment.yaml
 kubectl apply -f ui/service-ui.yaml
+kubectl apply -f ui/hpa.yaml
 echo " "
 
 echo "Deploying Preprocessing service..."
 kubectl apply -f preprocessing/deployment.yaml
 kubectl apply -f preprocessing/service.yaml 
+kubectl apply -f preprocessing/hpa.yaml
+echo " "
+
+# Wait until the helper pod is running
+echo "Creating helper pod to mount the model"
+kubectl apply -f inference/model-pod.yaml
+
+# Copy model into PVC
+echo "Copying model into PVC..."
+kubectl cp data/saved_model/final_model.h5 model-uploader:/mnt/models/final_model.h5
+
+# Verify model inside helper pod
+echo "Verifying model in PVC..."
+kubectl exec -it model-uploader -- sh -c "ls -l /mnt/models/"
+
+echo "Model successfully uploaded to PVC!"
 echo " "
 
 echo "Deploying Inference service..."

@@ -9,7 +9,16 @@ import tensorflow as tf
 app = Flask(__name__)
 
 # Kubernetes service URLs
-MODEL_PATH = "saved_model/final_model.h5"
+# MODEL_PATH = "saved_model/final_model.h5"
+
+MODEL_PATH = os.getenv("MODEL_PATH", "/inference/model/final_model.h5")
+
+print(f"[DEBUG] Looking for model at: {MODEL_PATH}")
+if os.path.exists(MODEL_PATH):
+    print(f"[DEBUG] Model file found at startup: {MODEL_PATH}")
+else:
+    print(f"[DEBUG] Model file NOT found at startup: {MODEL_PATH}")
+
 
 # Track last modified time
 last_loaded_time = 0
@@ -23,9 +32,16 @@ def load_model_if_updated():
 
     modified_time = os.path.getmtime(MODEL_PATH)
     if modified_time != last_loaded_time:
-        print(f"Reloading model from {MODEL_PATH}...")
-        model = tf.keras.models.load_model(MODEL_PATH)
-        last_loaded_time = modified_time
+        print(f"[INFO] Reloading model from {MODEL_PATH}...")
+        try:
+            model = tf.keras.models.load_model(MODEL_PATH)
+            last_loaded_time = modified_time
+            print(f"[INFO] Model loaded successfully at {MODEL_PATH}")
+        except Exception as e:
+            print(f"[ERROR] Failed to load model: {e}")
+            raise e
+    else:
+        print(f"[INFO] Model at {MODEL_PATH} is up-to-date, no reload needed.")
 
 @app.route("/health", methods=["GET", "POST"])
 def health_check():
