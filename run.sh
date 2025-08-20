@@ -41,8 +41,8 @@ echo "Copying model into PVC..."
 kubectl cp data/saved_model/final_model.h5 model-uploader:/mnt/models/final_model.h5
 
 # Verify model inside helper pod
-echo "Verifying model in PVC..."
-kubectl exec -it model-uploader -- sh -c "ls -l /mnt/models/"
+# echo "Verifying model in PVC..."
+# kubectl exec -it model-uploader -- sh -c "ls -l /mnt/models/"
 
 echo "Model successfully uploaded to PVC!"
 echo " "
