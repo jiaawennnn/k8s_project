@@ -21,6 +21,7 @@
         </nav>
     </header>
     
+    {% if not image_bytes %}
     <h2 class="upload-title">Upload any image to start prediction!</h2>
 
     <div id="preview" style="display:none;">
@@ -32,7 +33,7 @@
         <input type="file" name="image" accept="image/*" required id="imageInput">
         <input type="submit" value="Submit"/>
     </form>
-
+    {% endif %}
     
     {% if image_bytes %}
     <h2>Prediction Result</h2>
