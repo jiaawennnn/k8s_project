@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: preprocess
-        image: yoshana/preprocess-image:latest #need to replace the name with the docker hub username.
+        image: krystl123/preprocess-image:latest #need to replace the name with the docker hub username.
         imagePullPolicy: Always
         ports:
         - containerPort: 5001 # Port on which the container listens
