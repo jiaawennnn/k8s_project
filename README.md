@@ -26,17 +26,17 @@ minikube start
 \
 ***> Dockerhub username is the name of your account in Docker***
 ```
-docker build -t <docker_hub_username>/ui:latest -f ui/Dockerfile . 
-docker push <docker_hub_username>/ui:latest
+docker build -t <docker_hub_username>/ui_img:latest -f ui/Dockerfile . 
+docker push <docker_hub_username>/ui_img:latest
 
-docker build -t <docker_hub_username>/preprocess-image -f preprocessing/Dockerfile .
-docker push <docker_hub_username>/preprocess-image
+docker build -t <docker_hub_username>/preprocess-image:latest -f preprocessing/Dockerfile .
+docker push <docker_hub_username>/preprocess-image:latest
 
 docker build -t <docker_hub_username>/training-model:latest -f training/Dockerfile . 
 docker push <docker_hub_username>/training-model:latest
 
-docker build -t <docker_hub_username>/inference-image:latest -f inference/Dockerfile . 
-docker push <docker_hub_username>/inference-image:latest
+docker build -t <docker_hub_username>/inference-new:latest -f inference/Dockerfile . 
+docker push <docker_hub_username>/inference-new:latest
 ```
 
 ## Step 2: Set up service and deploy the containers
@@ -68,7 +68,12 @@ postgres-55869659f-twlv9   1/1     Running   0          48s
 postgres-55869659f-xzlp7   1/1     Running   0          48s
 ```
 
-## Step 4: Run kubernetes dashboard and expose database 
+## Step 4: Establish connection with model's pod
+```
+kubectl cp data/saved_model/final_model.h5 model-uploader:/mnt/models/final_model.h5
+```
+
+## Step 5: Run kubernetes dashboard and expose database 
 To run kubernetes dashboard: (**Use another terminal for proxy**)
 ```
 kubectl proxy
@@ -91,7 +96,7 @@ Forwarding from [::1]:5432 -> 5432
 **Note: This terminal must be running in the background for the database connection to work!**
 
 
-## Step 5: For database connection (Only on first run)
+## Step 6: For database connection (Only on first run)
 - Go to **Extensions** and download 
 - **PostgreSQL by Chris Kolkman**
 - **Database Client** by Database Client
@@ -99,7 +104,7 @@ Forwarding from [::1]:5432 -> 5432
 -  Press **Create Connection** and choose **PostgreSQL** as the server type.
 
 
-## Step 6: Enter in the table information
+## Step 7: Enter in the table information
 ```
 Name: prediction
 Group: db 
@@ -109,10 +114,10 @@ Username: wonwoo
 Password: wonwoo
 Port: 5432
 ```
+- Press reload button and ensure that table is created.
+
+## Step 8: Create table
 - Once created, go to db > prediction > predictions_db > public > Query
-
-
-## Step 7: Create table
 - Click on **+** to create new query (any name) and enter the following:
 ```
 CREATE TABLE IF NOT EXISTS prediction_history (
@@ -131,7 +136,7 @@ CREATE TABLE IF NOT EXISTS prediction_history (
 - Save query for future runs (name it anything you want)
 
 
-## Step 8: Connecting to Postgres
+## Step 9: Connecting to Postgres
 - Go to shortcut panel on the left
 - Go to PostgresSQL Explorer and click the '+'
 - Then, enter in the following when the pop up appears:
@@ -147,7 +152,7 @@ Click 'Show All Databases'
 Display name of connection: localhost
 ```
 
-## Step 9: Get the secret token for the dashboard
+## Step 10: Get the secret token for the dashboard
 To get the secret token for the dashboard, run this command:
 ```
 kubectl -n kubernetes-dashboard create token admin-user
@@ -156,7 +161,7 @@ Output will be something like this:
 eyJhbGciOiJSUzI1NiIsImtpZCI6IkFEU1VsdUdxdnB4YjM2R1dTOFRieW95ZzFDME1rdGEwTkpzTGNtaHR6a1UifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJhZG1pbi11c2VyIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImFkbWluLXVzZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiJhM2EyMjM3OS03Yjg5LTRhYzMtYTVkNC1kMzIzZDRhMzk0ZTUiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZXJuZXRlcy1kYXNoYm9hcmQ6YWRtaW4tdXNlciJ9.hLWdAu8CI2H5WB9-tG2PemD_RYWdIoc4_MvV3zP9USkuOsGnxsGQDNNAEo67Xj-4vLHNCpxwGCgWO-umvAE77uUIgWXu0-qxuO51Sw9pPe1NiqeV0Ed-8hAr_BN3QniOHElGLACqneIxHDS7XKpd7lyW88iWzMZOEpCW92QAQzQN-BroSgm3raTw0ix7xjLgqrmQV9PbAEyjZQxO3yb24FBN81C_DlXtRdwMznd8p3cKctkpEf6YGDQ1Sh6H6BhqVJ1MoFx20-_aLxhMMRFnRrDnv-yoGxPqg1PVHEeyGK2mpjeH9bQj8xkIDY4iJ-IC5-vU8FaBSlEbZgbX3BWFtgWFtg
 ``` 
 
-## Step 10: Start application
+## Step 11: Start application
 
 Follow this steps to run application successfully: 
 
@@ -179,14 +184,21 @@ minikube service ui-svc
 
 # For future runs
 **Before running any commands, please make sure that Docker Desktop is running!**
-### Step 1: Set up service and deploy the containers
+
+**Run all commands in Git Bash!**
+
+## Step 1: Start minikube
+```
+minikube start
+```
+
+## Step 2: Set up service and deploy the containers
 **In Git Bash**, run this command to create the database and application resources:
 ```
 ./run.sh
 ```
 
-
-## Step 2: Ensure all pods are running
+## Step 3: Ensure all pods are running
 ```
 kubectl get pod
 ```
@@ -198,26 +210,23 @@ postgres-55869659f-twlv9   1/1     Running   0          48s
 postgres-55869659f-xzlp7   1/1     Running   0          48s
 ```
 
+## Step 4: Establish connection with model's pod
+```
+kubectl cp data/saved_model/final_model.h5 model-uploader:/mnt/models/final_model.h5
+```
 
-## Step 3: Database
-- Go to the shortcut panel on the left, right click on 'db' and press **refresh**.
-- Go to public > Query 
-- Press on the query file that u have saved initially
-- Click **Run** or Ctrl + Enter
-
-
-## Step 4: Run kubernetes dashboard and expose database 
+## Step 5: Run kubernetes dashboard and expose database 
 To run kubernetes dashboard: (Use another terminal for proxy)
 ```
 kubectl proxy
 ```
-
+**^ PLEASE LEAVE THIS TERMINAL RUNNING IN BACKGROUND!**
 
 Port-forward the PostgresSQL service, database to the local machine:
 ```
 kubectl port-forward svc/postgres 5432:5432
 ```
-
+**^ PLEASE LEAVE THIS TERMINAL RUNNING IN BACKGROUND!**
 
 -  If successful, you should see this in terminal which shows that it has been connected.
 
@@ -228,7 +237,7 @@ Forwarding from [::1]:5432 -> 5432
 ```
 **Note: This terminal must be running in the background for the database connection to work.**
 
-## Step 5: Get the secret token for the dashboard
+## Step 6: Get the secret token for the dashboard
 To get the secret token for the dashboard, run this command:
 ```
 kubectl -n kubernetes-dashboard create token admin-user
@@ -237,7 +246,7 @@ Output will be something like this:
 eyJhbGciOiJSUzI1NiIsImtpZCI6IkFEU1VsdUdxdnB4YjM2R1dTOFRieW95ZzFDME1rdGEwTkpzTGNtaHR6a1UifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJhZG1pbi11c2VyIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImFkbWluLXVzZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiJhM2EyMjM3OS03Yjg5LTRhYzMtYTVkNC1kMzIzZDRhMzk0ZTUiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZXJuZXRlcy1kYXNoYm9hcmQ6YWRtaW4tdXNlciJ9.hLWdAu8CI2H5WB9-tG2PemD_RYWdIoc4_MvV3zP9USkuOsGnxsGQDNNAEo67Xj-4vLHNCpxwGCgWO-umvAE77uUIgWXu0-qxuO51Sw9pPe1NiqeV0Ed-8hAr_BN3QniOHElGLACqneIxHDS7XKpd7lyW88iWzMZOEpCW92QAQzQN-BroSgm3raTw0ix7xjLgqrmQV9PbAEyjZQxO3yb24FBN81C_DlXtRdwMznd8p3cKctkpEf6YGDQ1Sh6H6BhqVJ1MoFx20-_aLxhMMRFnRrDnv-yoGxPqg1PVHEeyGK2mpjeH9bQj8xkIDY4iJ-IC5-vU8FaBSlEbZgbX3BWFtgWFtg
 ``` 
 
-## Step 6: Start application
+## Step 7: Start application
 
 Follow this steps to run application successfully: 
 
