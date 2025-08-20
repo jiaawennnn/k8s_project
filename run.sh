@@ -33,12 +33,8 @@ kubectl apply -f preprocessing/hpa.yaml
 echo " "
 
 # Wait until the helper pod is running
-# echo "Creating helper pod to mount the model"
-# kubectl apply -f inference/model-pod.yaml
-
-# # Copy model into PVC
-# echo "Copying model into PVC..."
-# kubectl cp data/saved_model/final_model.h5 model-uploader:/mnt/models/final_model.h5
+echo "Creating helper pod to mount the model"
+kubectl apply -f inference/model-pod.yaml
 
 echo "Model successfully uploaded to PVC!"
 echo " "
